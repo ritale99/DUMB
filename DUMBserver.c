@@ -17,7 +17,7 @@ int main(int argc, char * argv[]){
 	
 	address.sin_port = htons(atoi(argv[2])); 
 	
-	address.sin_addr.s_addr = inet_addr(atoi(argv[1]));
+	address.sin_addr.s_addr = inet_addr(argv[1]);
 
 	memset(address.sin_zero,'\0' ,sizeof address.sin_zero);
 

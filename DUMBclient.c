@@ -13,7 +13,7 @@ int main(int argc, char* argv[]){
 	clientSocket = socket(PF_INET, SOCK_STREAM, 0);
 	address.sin_family = AF_INET; 
 	address.sin_port = htons(atoi(argv[2]));
-	address.sin_addr.s_addr = inet_addr(atoi(argv[1])); 
+	address.sin_addr.s_addr = inet_addr(argv[1]); 
 	
 	memset(address.sin_zero, '\0', sizeof address.sin_zero);
 	addr_size = sizeof address;
