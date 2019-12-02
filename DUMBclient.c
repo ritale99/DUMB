@@ -19,7 +19,7 @@ int main(int argc, char* argv[]){
 	memset(address.sin_zero, '\0', sizeof address.sin_zero);
 	addr_size = sizeof address;
 	
-	printf("Enter the command\n"); 
+	printf("Enter the message\n"); 
 	scanf("%s",str);
 	
 	int i;
@@ -29,21 +29,36 @@ int main(int argc, char* argv[]){
 			if (connect(clientSocket, (struct sockaddr *) &address, addr_size)>=0){
 				send(clientSocket,"HELLO",7,0); 	
 				recv(clientSocket,buffer, 1024, 0);
-				printf("%s", buffer);
+				printf("%s\n", buffer);
 				break; 
 			}
 			else if (i==2){
 				//connection has failed
-				printf("Connection Failed\n");	
+				printf("Connection Failed\n");
+				return 0;	
 			}	
 				
 		
+		}
+		
+		//continue entering messages
+		while(1){
+			printf("Enter the Message\n");
+			scanf("%s",str);
+			
+			switch(str)
+							
+			//send to server...
+		
+		
+			//receive from server...
+			
 		}
 	}
 	
 	recv(clientSocket, buffer, 1024, 0 ); 
 
-	printf("Message is: %s", buffer); 
+	//printf("Message is: %s", buffer); 
 	
 	return 0; 
 
