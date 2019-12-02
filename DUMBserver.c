@@ -3,41 +3,60 @@
 #include <netinet/in.h>
 #include <string.h> 
 
-int main(int argc, char * argv[]){
-	
-	int server_fd, newSocket; 
-	char buffer [1024]; 
-	struct sockaddr_in address; 
-	struct sockaddr_storage serverStorage;
-	socklen_t addr_size; 
+int numConnections = 1;
+int server_fd;
+struct sockaddr_in serverAddress;
 
+void acceptClient()
+{
+	struct sockaddr_in clientAddress;
+	socklen_t size = sizeof(clientAddress);
+	//Accept connection to client, stores address and client file descriptor
+	int client_fd = accept(server_fd, (struct sockaddr*)&clientAddress, &size);
+
+	char reply[] = "OK!";
+	//Sends successful connection reply to client
+	send(client_fd, "OK!", sizeof(char) * (unsigned)strlen(reply), 0);
+}
+
+int setupServer(uint16_t port, in_addr_t address)
+{
+	//Create Server Socket
 	server_fd = socket(PF_INET, SOCK_STREAM, 0);
-	
-	address.sin_family = AF_INET;
-	
-	address.sin_port = htons(atoi(argv[2])); 
-	
-	address.sin_addr.s_addr = inet_addr(argv[1]);
 
-	memset(address.sin_zero,'\0' ,sizeof address.sin_zero);
+	//Set Address to IPv4 type
+	serverAddress.sin_family = AF_INET;
 
-	bind (server_fd, (struct sockaddr *) &address, sizeof(address));
-	
-	if (listen(server_fd, 5)==0){
-		printf("Listening\n");
-			
+	//Set Port
+	serverAddress.sin_port = port;
+
+	//Set Host Address
+	serverAddress.sin_addr.s_addr = address;
+
+	//Zero out some array?
+	memset(serverAddress.sin_zero, '\0', sizeof(serverAddress.sin_zero));
+
+	//Binds and returns return value
+	return bind(server_fd, (struct sockaddr*) &serverAddress, sizeof(serverAddress));
+}
+
+int main(int argc, char * argv[])
+{
+	//Sets and connects server socket to internet
+	if (setupServer(htons(atoi(argv[2])), inet_addr(argv[1])) < 0) {
+		printf("Bind failed\n");
+		return 0;
 	}
 	
-	else{
-		printf("Error\n");	
+	//Server socket listens for up to numConnections connections
+	if (listen(server_fd, numConnections) < 0) {
+		printf("Listen failed\n");
+		return 0;
 	}
-	
-	addr_size - sizeof serverStorage;
-	newSocket = accept(server_fd, (struct sockaddr *) &serverStorage, &addr_size);
+	printf("Listening\n");
 
-	strcpy(buffer,"MSG");
-	send(newSocket, buffer, 13, 0);
+	//Accepts client to receive and reply to messages
+	acceptClient();	
 
 	return 0; 
-
 }

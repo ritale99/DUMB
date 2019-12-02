@@ -1,0 +1,4 @@
+DUMB is a mail service in which all users have access to all inboxes in the box
+A box is the collection of inboxes held in the server
+An inbox is a collection of messages stored in a queue
+	Note: NXTMG gets the next message and removes it from the queue
