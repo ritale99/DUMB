@@ -1,22 +1,25 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h> 
 
-int numConnections = 1;
+int numConnections = 5;
 int server_fd;
 struct sockaddr_in serverAddress;
 
-void acceptClient()
+void* handleClient(void* args)
 {
-	struct sockaddr_in clientAddress;
-	socklen_t size = sizeof(clientAddress);
-	//Accept connection to client, stores address and client file descriptor
-	int client_fd = accept(server_fd, (struct sockaddr*)&clientAddress, &size);
+	int client_fd = *(int*)args;
 
 	char reply[] = "OK!";
 	//Sends successful connection reply to client
-	send(client_fd, "OK!", sizeof(char) * (unsigned)strlen(reply), 0);
+	send(client_fd, "OK!", sizeof(char) * ((unsigned)strlen(reply) + 1), 0);
+
+	//It won't be finished with a pthread_join, so should I just do yield or exit? (asking online)
+	pthread_yield();
+	pthread_exit(0);
 }
 
 int setupServer(uint16_t port, in_addr_t address)
@@ -49,14 +52,26 @@ int main(int argc, char * argv[])
 	}
 	
 	//Server socket listens for up to numConnections connections
-	if (listen(server_fd, numConnections) < 0) {
-		printf("Listen failed\n");
+	if (listen(server_fd, 1) < 0) {
+		printf("Initial Listen failed\n");
 		return 0;
 	}
-	printf("Listening\n");
 
-	//Accepts client to receive and reply to messages
-	acceptClient();	
+	//Accepts clients to receive and reply to messages
+	//After each accept, create thread to handle client, then listen for another client
+	while (1) {
+		struct sockaddr_in clientAddress;
+		socklen_t size = sizeof(clientAddress);
 
+		//Accept a client
+		int client_fd = accept(server_fd, (struct sockaddr*)&clientAddress, &size);
+
+		//Creates a thread for connection to be handled separately
+		pthread_t thread;
+		pthread_create(&thread, NULL, handleClient, (void*)&client_fd);
+	};
+
+
+	//Unreachable, program is closed using ctrl+C
 	return 0; 
 }
