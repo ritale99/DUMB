@@ -7,6 +7,7 @@ int main(int argc, char* argv[]){
 
 	int clientSocket;
 	char buffer[1024];
+	char str[7];
 	struct sockaddr_in address;
 	socklen_t addr_size;
 	
@@ -18,10 +19,46 @@ int main(int argc, char* argv[]){
 	memset(address.sin_zero, '\0', sizeof address.sin_zero);
 	addr_size = sizeof address;
 	
-	connect(clientSocket, (struct sockaddr *) &address, addr_size);
+	printf("Enter the message\n"); 
+	scanf("%s",str);
+	
+	int i;
+	int result =strcmp(str, "HELLO"); 
+	if(result ==0){ 
+		for(i = 0; i<3; i++){	
+			if (connect(clientSocket, (struct sockaddr *) &address, addr_size)>=0){
+				send(clientSocket,"HELLO",7,0); 	
+				recv(clientSocket,buffer, 1024, 0);
+				printf("%s\n", buffer);
+				break; 
+			}
+			else if (i==2){
+				//connection has failed
+				printf("Connection Failed\n");
+				return 0;	
+			}	
+				
+		
+		}
+		
+		//continue entering messages
+		while(1){
+			printf("Enter the Message\n");
+			scanf("%s",str);
+			
+			switch(str)
+							
+			//send to server...
+		
+		
+			//receive from server...
+			
+		}
+	}
+	
 	recv(clientSocket, buffer, 1024, 0 ); 
 
-	printf("Message is: %s", buffer); 
+	//printf("Message is: %s", buffer); 
 	
 	return 0; 
 
