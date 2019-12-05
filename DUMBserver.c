@@ -4,21 +4,67 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h> 
+#include <errno.h>
 
 int numConnections = 5;
 int server_fd;
 struct sockaddr_in serverAddress;
 
+void HELLO(int client_fd, char* buffer) {
+	return;
+}
+
+int readMessage(int client_fd, char* buffer) {
+	ssize_t readBytes = 0
+	ssize_t bytes = 5;
+
+	//Reads message until no more bytes found or 5 bytes read
+	//5 bytes is the command length
+	do {
+		readBytes = read(client_fd, buffer, bytes);
+		bytes -= readBytes;
+	} while (bytes > 0 && readBytes > 0);
+
+	if (bytes > 0) {
+		return 1; //Invalid command
+	}
+	return 0;
+}
+
 void* handleClient(void* args)
 {
-	int client_fd = *(int*)args;
+	//Detaches threat to make it deallocate automatically on exit
+	pthread_detach(pthread_self());
 
-	char reply[] = "OK!";
+	int client_fd = *(int*)args;
+	int session = 0;
+
+	//Initialize buffer
+	char buffer[64];
+	memset(buffer, '\0', sizeof(char)*64);
+
+	while(1) {
+		//Reads message command into buffer
+		if (getCommand(client_fd, buffer)) {
+			//Invalid command
+		}
+
+		int handler = handleCommand(client_fd, buffer);
+		if (handler < 0) {
+			//error
+		} else if (handler == 0) { //HELLO
+			HELLO(client_fd, buffer);
+		} else if (handler == 1) { //GDBYE
+			
+		} 
+	}
+	
 	//Sends successful connection reply to client
-	send(client_fd, "OK!", sizeof(char) * ((unsigned)strlen(reply) + 1), 0);
+	send(client_fd, reply, sizeof(char) * ((unsigned)strlen(reply) + 1), 0);
+
+	
 
 	//It won't be finished with a pthread_join, so should I just do yield or exit? (asking online)
-	pthread_yield();
 	pthread_exit(0);
 }
 
@@ -51,21 +97,20 @@ int main(int argc, char * argv[])
 		return 0;
 	}
 	
-	//Server socket listens for up to numConnections connections
-	if (listen(server_fd, 1) < 0) {
-		printf("Initial Listen failed\n");
-		return 0;
-	}
-
-	//Accepts clients to receive and reply to messages
+	//Listens for and Accepts clients to receive and reply to messages
 	//After each accept, create thread to handle client, then listen for another client
 	while (1) {
+		if (listen(server_fd, 1) < 0) {
+			printf("Listen failed: %d\n", errno);
+			return 0;
+		}
+
 		struct sockaddr_in clientAddress;
 		socklen_t size = sizeof(clientAddress);
 
-		//Accept a client
+		//Accept a client's message
 		int client_fd = accept(server_fd, (struct sockaddr*)&clientAddress, &size);
-
+		
 		//Creates a thread for connection to be handled separately
 		pthread_t thread;
 		pthread_create(&thread, NULL, handleClient, (void*)&client_fd);
