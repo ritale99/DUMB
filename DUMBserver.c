@@ -13,9 +13,9 @@ void* handleClient(void* args)
 {
 	int client_fd = *(int*)args;
 
-	char reply[] = "OK!";
+	char reply[] = "HELLO DUMBv0 ready!";
 	//Sends successful connection reply to client
-	send(client_fd, "OK!", sizeof(char) * ((unsigned)strlen(reply) + 1), 0);
+	send(client_fd, "HELLO DUMBv0 ready!", sizeof(char) * ((unsigned)strlen(reply) + 1), 0);
 
 	//It won't be finished with a pthread_join, so should I just do yield or exit? (asking online)
 	pthread_yield();
