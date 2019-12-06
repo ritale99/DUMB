@@ -36,6 +36,7 @@ void* handleClient(void* args)
 	//Detaches threat to make it deallocate automatically on exit
 	pthread_detach(pthread_self());
 
+<<<<<<< HEAD
 	int client_fd = *(int*)args;
 	int session = 0;
 
@@ -63,6 +64,11 @@ void* handleClient(void* args)
 	send(client_fd, reply, sizeof(char) * ((unsigned)strlen(reply) + 1), 0);
 
 	
+=======
+	char reply[] = "HELLO DUMBv0 ready!";
+	//Sends successful connection reply to client
+	send(client_fd, "HELLO DUMBv0 ready!", sizeof(char) * ((unsigned)strlen(reply) + 1), 0);
+>>>>>>> 3d01f7dbdc0cef5fc16b50a18b63538bad8cb8d4
 
 	//It won't be finished with a pthread_join, so should I just do yield or exit? (asking online)
 	pthread_exit(0);
