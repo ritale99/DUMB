@@ -10,11 +10,29 @@ int numConnections = 5;
 int server_fd;
 struct sockaddr_in serverAddress;
 
-void HELLO(int client_fd, char* buffer) {
+
+void HELLO(int client_fd, char* buffer, int* sessionPtr)
+{
+
+	//Handles HELLO command which creates a new session
+	//session should be 1 if session setup already, 0 if not setup
+
+	//Don't forget to check if command is HELLO, rn, we've only checked if HELLO is there, it may be HELLOQ
+
+	//char reply[] = "OK!" //server only says OK! with message or ERR with error message
+	//send(client_fd, reply, sizeof(char) * ((unsigned)strlen(reply)+1), 0);
 	return;
 }
 
-int readMessage(int client_fd, char* buffer) {
+void GDBYE(int client_fd, char* buffer, int* sessionPtr)
+{
+	
+	return;
+}
+
+
+int getCommand(int client_fd, char* buffer)
+{
 	ssize_t readBytes = 0
 	ssize_t bytes = 5;
 
@@ -26,17 +44,17 @@ int readMessage(int client_fd, char* buffer) {
 	} while (bytes > 0 && readBytes > 0);
 
 	if (bytes > 0) {
-		return 1; //Invalid command
+		return 1; //command is too short
 	}
 	return 0;
 }
+
 
 void* handleClient(void* args)
 {
 	//Detaches threat to make it deallocate automatically on exit
 	pthread_detach(pthread_self());
 
-<<<<<<< HEAD
 	int client_fd = *(int*)args;
 	int session = 0;
 
@@ -47,30 +65,22 @@ void* handleClient(void* args)
 	while(1) {
 		//Reads message command into buffer
 		if (getCommand(client_fd, buffer)) {
-			//Invalid command
-		}
+			//read all bytes, but not enough bytes for a command
+			//reply an error
+		} else {
 
-		int handler = handleCommand(client_fd, buffer);
-		if (handler < 0) {
-			//error
-		} else if (handler == 0) { //HELLO
-			HELLO(client_fd, buffer);
-		} else if (handler == 1) { //GDBYE
-			
-		} 
+			//Check what command is inputted
+			if (strcmp(buffer, "HELLO") == 0) {
+				HELLO(client_fd, buffer, &session);
+			} else if (strcmp(buffer, "GDBYE") == 0) {
+				GDBYE(client_fd, buffer, &session);
+				if (session == 0) break;
+			} else if (strcmp(buffer, "insert next command here") == 0) {
+	
+			}
+		}
 	}
 	
-	//Sends successful connection reply to client
-	send(client_fd, reply, sizeof(char) * ((unsigned)strlen(reply) + 1), 0);
-
-	
-=======
-	char reply[] = "HELLO DUMBv0 ready!";
-	//Sends successful connection reply to client
-	send(client_fd, "HELLO DUMBv0 ready!", sizeof(char) * ((unsigned)strlen(reply) + 1), 0);
->>>>>>> 3d01f7dbdc0cef5fc16b50a18b63538bad8cb8d4
-
-	//It won't be finished with a pthread_join, so should I just do yield or exit? (asking online)
 	pthread_exit(0);
 }
 
