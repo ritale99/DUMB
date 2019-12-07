@@ -3,30 +3,124 @@
 #include <netinet/in.h> 
 #include <string.h> 
 
-<<<<<<< HEAD
-int attemptConnect(int clientSocket, struct sockaddr* addressPtr, int addr_size, char* buffer)
+int clientSocket;
+int client_fd;
+struct sockaddr_in clientAddress;
+
+int attemptConnect(socklen_t addr_size, char* buffer)
 {
+	//Attempt connect 3x
 	int i;
-	//3 attempts to connect
-	for (i = 0; i < 3; i++) {
-		//Attempt connect
-		if (connect(clientSocket, addressPtr, addr_size) >= 0) {
-			send(clientSocket, "HELLO", 7, 0);
-			recv(clientSocket, buffer, 1024, 0);
-			printf("%s\n", buffer);
-			return 0;
+	for (i=0; i<3; ++i) {
+		if (connect(clientSocket, (struct sockaddr*)&clientAddress, addr_size) >= 0) {
+			//On connect, send HELLO
+			send(clientSocket, "HELLO", 6, 0);
+			memset(buffer, '\0', 1024);
+
+			int bytes = 20;
+			int c = 0;
+			do {
+				c = recv(clientSocket, buffer (bytes - 3), bytes, 0);
+				bytes -= c;
+			} while (bytes > 0 && c > 0);
+
+			//Check if server reply is correct
+			if (strcmp(buffer, "HELLO DUMBv0 ready!") == 0) {
+				printf("Connection accepted\n");
+				return 0;
+			} else {
+				printf("Connection failed: HELLO failed\n");
+				return 1;
+			}
 		}
 	}
 	printf("Connection failed\n");
-	return -1;
+	return 1;
 }
 
-int main(int argc, char* argv[])
+void handleInput(char* input)
 {
-	int clientSocket;
-=======
-int client_fd;
-struct sockaddr_in clientAddress;
+	if (strcmp(input, "quit")) {
+		
+	} else if (strcmp(input, "create")) {
+		//Convert "create" to "CREAT"
+		input = "CREAT "; //Note, makes input[5] a '\0' already, so don't need to manually do it
+		printf("Please input the name of the new message box:\n");
+		scanf("%s", input + 6);
+	} else if (strcmp(input, "delete")) {
+
+	} else if (strcmp(input, "open")) {
+
+	} else if (strcmp(input, "close")) {
+
+	} else if (strcmp(input, "next")) {
+
+	} else if (strcmp(input, "put")) {
+
+	}
+}
+
+int handleReply(char* input, char* reply)
+{
+	//get reply
+	memset(reply, '\0', 1024);
+	
+	int bytes = 3;
+	int c = 0;
+	do {
+		c = recv(clientSocket, reply + (bytes - 3), bytes, 0);
+		bytes -= c;
+	} while (bytes > 0 && c > 0);
+
+	//Format input to ignore arguments
+	input[5] = '\0';
+
+	//On successful command
+	if (strcmp(reply, "OK!")) {
+		printf("Server replied %s\n", reply);
+
+		if (strcmp(input, "GDBYE") == 0) {
+			//On successful GDBYE? no reply, I think
+		} else if (strcmp(input, "CREAT") == 0) {
+			//On successful CREAT
+		} else if (strcmp(input, "OPNBX") == 0) {
+			//ON successful OPNBX
+		} else if (strcmp(input, "NXTMG") == 0) {
+
+		} else if (strcmp(input, "PUTMG") == 0) {
+
+		} else if (strcmp(input, "DELBX") == 0) {
+			
+		}
+	//On Error
+	} else if (strcmp(reply, "ER:")) {
+		//Get error message
+		int bytes2 = 5;
+		do {
+			c = recv(clientSocket, reply + 3 + (bytes2 - 5), bytes2, 0);
+			bytes2 -= c;
+		} while (bytes2 > 0 && c > 0);
+
+		printf("Server replied %s\n", reply);
+
+		if (strcmp(reply, "ER:EXIST")) {
+			//Attempt to create inbox with a used name
+		} else if (strcmp(reply, "ER:WHAT?")) {
+			//Broken or malformed input
+		} else if (strcmp(reply, "ER:NEXST")) {
+			//Attempt to open/delete not existing inbox
+		} else if (strcmp(reply, "ER:OPEND")) {
+			//Attempt to open/delete already opened inbox
+		} else if (strcmp(reply, "ER:EMPTY")) {
+			//Attempt to read empty inbox
+		} else if (strcmp(reply, "ER:NOOPN")) {
+			//Attempt to read/write/close with no inbox open
+		} else if (strcmp(reply, "ER:NOTMY")) {
+			//Attempt to delete not empty inbox
+		}
+	}
+	return 0;
+}
 
 void setupClient(uint16_t port, in_addr_t address)
 {
@@ -48,100 +142,33 @@ void setupClient(uint16_t port, in_addr_t address)
 	return;
 }
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[])
+{
+	char input[1024];
+	char reply[1024];
 
->>>>>>> 3d01f7dbdc0cef5fc16b50a18b63538bad8cb8d4
-	char buffer[1024];
-	char str[7];
-	socklen_t addr_size;
-<<<<<<< HEAD
-	
-	//Setup socket to connect to server
-	clientSocket = socket(PF_INET, SOCK_STREAM, 0);
-	address.sin_family = AF_INET; 
-	address.sin_port = htons(atoi(argv[2]));
-	address.sin_addr.s_addr = inet_addr(argv[1]); 
-	
-	memset(address.sin_zero, '\0', sizeof address.sin_zero);
-	memset(buffer, '\0', sizeof(char)*1024);
-	addr_size = sizeof address;
-	
+	setupClient(htons(atoi(argv[2])), inet_addr(argv[1]));
+	socklen_t addr_size = sizeof(clientAddress.sin_addr.s_addr);
+
 	//Attempt to connect to server
-	if (attemptConnect(clientSocket, (struct sockaddr*)&address, addr_size, buffer) < 0) {
-		return 0;
-	}
-		
+	if (attemptConnect((struct sockaddr*)&address, addr_size, reply) == 1) return 0;
+
 	//continue entering messages
 	while(1) {
 		printf("Enter the Message\n");
-		scanf("%s",str);
+		memset(input, '\0', 1024);
+		//takes a command as input
+		scanf("%s", input);
 
-		//switch(str)
+		//change input to a command and ask for arguments if necessary
+		handleInput(input);
 
-		//send to server...
+		//send input to server
+		send(clientSocket, input, strlen(input), 0);
 
-
-		//receive from server...
-
+		//receives and handles reply from server
+		if (handleReply(input, reply) == 1) break;
 	}
-=======
-	addr_size = sizeof clientAddress;
-		
-	setupClient(htons(atoi(argv[2])), inet_addr(argv[1]));
-		
 
-		//try to connect 3 times 
-		int i;
-		for(i = 0; i<3; i++){	
-			if (connect(client_fd, (struct sockaddr *) &clientAddress, addr_size)>=0){
-				send(client_fd,"HELLO",7,0); 	
-				recv(client_fd,buffer, 1024, 0);
-				printf("%s\n", buffer);
-				break; 
-			}
-			else if (i==2){
-				//connection has failed
-				printf("Connection Failed\n");
-				return 0;	
-			}	
-				
-		
-		}
-		
-		//continue entering messages
-		while(1){
-			printf("Enter the Message\n");
-			scanf("%s",str);
-			
-			//sends GDBYE with no arguments
-			if(strcmp(str,"quit")==0)
-			{
-				
-			}
-		//create message box: takes in: create arg0
-		else if(strcmp(str, "create")==0)
-			{
-				printf("Create message box with what name?\n");
-				continue;
-			}
-		
-		// else if ()
-		// 	{
-
-		// 	}
-
-		else{
-			//
-		}
-
-			return;
-		
-			
-		}
->>>>>>> 3d01f7dbdc0cef5fc16b50a18b63538bad8cb8d4
-	
-	
 	return 0; 
-
-
 }
