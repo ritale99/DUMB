@@ -19,8 +19,8 @@ void HELLO(int client_fd, char* buffer, int* sessionPtr)
 
 	//Don't forget to check if command is HELLO, rn, we've only checked if HELLO is there, it may be HELLOQ
 
-	//char reply[] = "OK!" //server only says OK! with message or ERR with error message
-	//send(client_fd, reply, sizeof(char) * ((unsigned)strlen(reply)+1), 0);
+	char reply[] = "OK!"; //server only says OK! with message or ERR with error message
+	send(client_fd, reply, sizeof(char) * ((unsigned)strlen(reply)+1), 0);
 	return;
 }
 
@@ -33,7 +33,7 @@ void GDBYE(int client_fd, char* buffer, int* sessionPtr)
 
 int getCommand(int client_fd, char* buffer)
 {
-	ssize_t readBytes = 0
+	ssize_t readBytes = 0;
 	ssize_t bytes = 5;
 
 	//Reads message until no more bytes found or 5 bytes read
@@ -112,7 +112,6 @@ int main(int argc, char * argv[])
 		printf("Bind failed\n");
 		return 0;
 	}
-	
 	//Listens for and Accepts clients to receive and reply to messages
 	//After each accept, create thread to handle client, then listen for another client
 	while (1) {
@@ -126,11 +125,11 @@ int main(int argc, char * argv[])
 
 		//Accept a client's message
 		int client_fd = accept(server_fd, (struct sockaddr*)&clientAddress, &size);
-		
+		handleClient((void*)&client_fd);
 		//Creates a thread for connection to be handled separately
 		pthread_t thread;
 		pthread_create(&thread, NULL, handleClient, (void*)&client_fd);
-	};
+	} 
 
 
 	//Unreachable, program is closed using ctrl+C

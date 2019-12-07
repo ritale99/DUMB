@@ -3,7 +3,6 @@
 #include <netinet/in.h> 
 #include <string.h> 
 
-int clientSocket;
 int client_fd;
 struct sockaddr_in clientAddress;
 
@@ -12,20 +11,21 @@ int attemptConnect(socklen_t addr_size, char* buffer)
 	//Attempt connect 3x
 	int i;
 	for (i=0; i<3; ++i) {
-		if (connect(clientSocket, (struct sockaddr*)&clientAddress, addr_size) >= 0) {
+		if (connect(client_fd, (struct sockaddr*)&clientAddress, addr_size) >= 0) { printf("trying?");
 			//On connect, send HELLO
-			send(clientSocket, "HELLO", 6, 0);
+			send(client_fd, "HELLO", 6, 0);
 			memset(buffer, '\0', 1024);
 
 			int bytes = 20;
 			int c = 0;
 			do {
-				c = recv(clientSocket, buffer (bytes - 3), bytes, 0);
+				c = recv(client_fd, buffer+(3-bytes), bytes, 0);
 				bytes -= c;
 			} while (bytes > 0 && c > 0);
 
 			//Check if server reply is correct
-			if (strcmp(buffer, "HELLO DUMBv0 ready!") == 0) {
+			if (strcmp(buffer, "OK!") == 0) {
+				//change this print statement
 				printf("Connection accepted\n");
 				return 0;
 			} else {
@@ -68,7 +68,7 @@ int handleReply(char* input, char* reply)
 	int bytes = 3;
 	int c = 0;
 	do {
-		c = recv(clientSocket, reply + (bytes - 3), bytes, 0);
+		c = recv(client_fd, reply + (bytes - 3), bytes, 0);
 		bytes -= c;
 	} while (bytes > 0 && c > 0);
 
@@ -97,7 +97,7 @@ int handleReply(char* input, char* reply)
 		//Get error message
 		int bytes2 = 5;
 		do {
-			c = recv(clientSocket, reply + 3 + (bytes2 - 5), bytes2, 0);
+			c = recv(client_fd, reply + 3 + (bytes2 - 5), bytes2, 0);
 			bytes2 -= c;
 		} while (bytes2 > 0 && c > 0);
 
@@ -146,12 +146,12 @@ int main(int argc, char* argv[])
 {
 	char input[1024];
 	char reply[1024];
-
+	socklen_t addr_size = sizeof clientAddress;
 	setupClient(htons(atoi(argv[2])), inet_addr(argv[1]));
-	socklen_t addr_size = sizeof(clientAddress.sin_addr.s_addr);
-
+//	socklen_t addr_size = sizeof(clientAddress.sin_addr.s_addr);
+//	socklen_t addr_size = sizeof clientAddress;
 	//Attempt to connect to server
-	if (attemptConnect((struct sockaddr*)&address, addr_size, reply) == 1) return 0;
+	if (attemptConnect(addr_size, reply) == 1) return 0;
 
 	//continue entering messages
 	while(1) {
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
 		handleInput(input);
 
 		//send input to server
-		send(clientSocket, input, strlen(input), 0);
+		send(client_fd, input, strlen(input), 0);
 
 		//receives and handles reply from server
 		if (handleReply(input, reply) == 1) break;
