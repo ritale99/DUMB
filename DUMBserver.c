@@ -125,7 +125,7 @@ int main(int argc, char * argv[])
 
 		//Accept a client's message
 		int client_fd = accept(server_fd, (struct sockaddr*)&clientAddress, &size);
-		handleClient((void*)&client_fd);
+
 		//Creates a thread for connection to be handled separately
 		pthread_t thread;
 		pthread_create(&thread, NULL, handleClient, (void*)&client_fd);
