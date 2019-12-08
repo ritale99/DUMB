@@ -30,6 +30,12 @@ void GDBYE(int client_fd, char* buffer, int* sessionPtr)
 	return;
 }
 
+void OPNBX(int client_fd, char* buffer, int* sessionPtr)
+{
+	printf("Good, attempting to open a box");
+	return;
+}
+
 
 int getCommand(int client_fd, char* buffer)
 {
@@ -89,8 +95,8 @@ void* handleClient(void* args)
 			} else if (strcmp(buffer, "GDBYE") == 0) {
 				GDBYE(client_fd, buffer, &session);
 				if (session == 0) break;
-			} else if (strcmp(buffer, "insert next command here") == 0) {
-	
+			} else if (strcmp(buffer, "OPNBX") == 0) {
+				OPNBX(client_fd, buffer, &session);
 			}
 		}
 	}

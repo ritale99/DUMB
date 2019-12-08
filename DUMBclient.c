@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <errno.h>
 #include <string.h>
+#include <math.h>
 
 int client_fd;
 struct sockaddr_in clientAddress;
@@ -44,26 +46,65 @@ int attemptConnect(char* buffer)
 	return 1;
 }
 
-void handleInput(char* input)
+void inputString(size_t* size, char** str)
+{
+	char c;
+	*size = 4;
+	size_t len = 0;
+	*str = realloc(NULL, *size); //malloc space
+	if (!(*str)) {
+		return;
+	}
+
+	//Source: stackoverflow.com/questions/16870485
+	while (EOF != (c=fgetc(stdin)) && c != '\n') { //keep getting chars while there is input
+		(*str)[len++] = c; //add char to string
+		
+		if (len == *size) { //if max size, increase size by 4
+			*str = realloc(*str, *size += 4); //reallocate the new space
+			if (!(*str)) {
+				return;
+			}
+		}
+	}
+
+	(*str)[len++] = '\0'; //don't need to add space because there's atleast 1 space left
+	*str = realloc(*str, len); //malloc just enough space
+	*size = len; //set size to size of space
+}
+
+void handleInput(char** input, size_t* size)
 {
 	printf("Handling input\n");
-	if (strcmp(input, "quit")) {
+	if (strcmp(*input, "quit") == 0) { //s
 		
-	} else if (strcmp(input, "create")) {
-		//Convert "create" to "CREAT"
-		input = "CREAT "; //Note, makes input[5] a '\0' already, so don't need to manually do it
-		printf("Please input the name of the new message box:\n");
-		scanf("%s", input + 6);
-	} else if (strcmp(input, "delete")) {
+	} else if (strcmp(*input, "create") == 0) { //r
+		
+	} else if (strcmp(*input, "delete") == 0) { //r
+		
+	} else if (strcmp(*input, "open") == 0) { //s
+		char* boxName;
+		size_t nameSize;
+		printf("Please input the name of the message box to open:\n");
+		//takes user input
+		inputString(&nameSize, &boxName);
 
-	} else if (strcmp(input, "open")) {
+		//sum of cmd, !, length of size, !, message
+		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize;
+		//reallocate input to fit new input
+		*input = realloc(*input, *size);
+		//set new input
+		sprintf(*input, "%s!%d!%s", "OPNBX", nameSize, boxName);
 
-	} else if (strcmp(input, "close")) {
-
-	} else if (strcmp(input, "next")) {
-
-	} else if (strcmp(input, "put")) {
-
+		//free inputted name of box
+		free(boxName);
+	} else if (strcmp(*input, "close") == 0) { //s
+		
+	} else if (strcmp(*input, "next") == 0) { //r
+		
+	} else if (strcmp(*input, "put") == 0) { //s
+		
+		printf("Please input a message:\n");
 	}
 	return;
 }
@@ -154,7 +195,6 @@ void setupClient(uint16_t port, in_addr_t address)
 
 int main(int argc, char* argv[])
 {
-	char input[1024];
 	char reply[1024];
 
 	setupClient(htons(atoi(argv[2])), inet_addr(argv[1]));
@@ -165,18 +205,22 @@ int main(int argc, char* argv[])
 	//continue entering messages
 	while(1) {
 		printf("\nEnter a command:\n");
-		memset(input, '\0', 1024);
-		//takes a command as input
-		scanf("%s", input);
+		char* input;
+		size_t size;
+		inputString(&size, &input);
 
 		//change input to a command and ask for arguments if necessary
-		handleInput(input);
+		handleInput(&input, &size);
 
 		//send input to server
-		send(client_fd, input, strlen(input), 0);
+		send(client_fd, input, size, 0);
 
 		//receives and handles reply from server
-		if (handleReply(input, reply) == 1) break;
+		if (handleReply(input, reply) == 1) {
+			free(input);
+			break;
+		}
+		free(input);
 	}
 
 	return 0; 
