@@ -10,10 +10,9 @@ int numConnections = 5;
 int server_fd;
 struct sockaddr_in serverAddress;
 
-
 void HELLO(int client_fd, char* buffer, int* sessionPtr)
 {
-	printf("Handling HELLO\n");
+	printf("Handling HELLO for %d\n", client_fd);
 
 	//Handles HELLO command which creates a new session
 	//session should be 1 if session setup already, 0 if not setup
@@ -35,17 +34,17 @@ void GDBYE(int client_fd, char* buffer, int* sessionPtr)
 int getCommand(int client_fd, char* buffer)
 {
 	ssize_t readBytes = 0;
-	ssize_t bytes = 5;
+	ssize_t bytes = 6;
 
-	printf("\tReading command\n");
+	printf("\tReading command of %d\n", client_fd);
 
 	//Reads message until no more bytes found or 5 bytes read
 	//5 bytes is the command length
-	memset(buffer, '\0', 1024);
+	memset(buffer, '\0', 64);
 	do {
-		readBytes = read(client_fd, buffer, bytes);
+		readBytes = read(client_fd, buffer + (6 - bytes), bytes);
 		bytes -= readBytes;
-		printf("\tRead %d\n", readBytes);
+		printf("\tRead %d bytes\n", readBytes);
 	} while (bytes > 0 && readBytes != 0);
 
 	if (bytes > 0) {
@@ -63,7 +62,8 @@ void* handleClient(void* args)
 	//Detaches threat to make it deallocate automatically on exit
 	pthread_detach(pthread_self());
 
-	int client_fd = *(int*)args;
+	int client_fd = *(int*)args; 
+	printf("Handling %d\n", client_fd);
 	int session = 0;
 
 	//Initialize buffer
@@ -73,7 +73,8 @@ void* handleClient(void* args)
 	while(1) {
 		//Reads message command into buffer
 		int e = getCommand(client_fd, buffer);
-		printf("\t%s\n", buffer);
+		printf("\t%d says %s\n", client_fd, buffer);
+
 		if (e == 1) {
 			printf("Command too small\n");
 			//read all bytes, but not enough bytes for a command
@@ -137,11 +138,13 @@ int main(int argc, char * argv[])
 		socklen_t size = sizeof(clientAddress);
 
 		//Accept a client's message
-		int client_fd = accept(server_fd, (struct sockaddr*)&clientAddress, &size);
+		int* client_fd = (int*)malloc(sizeof(int));
+		*client_fd = accept(server_fd, (struct sockaddr*)&clientAddress, &size);
+		printf("Accepting %d\n", *client_fd);
 
 		//Creates a thread for connection to be handled separately
 		pthread_t thread;
-		pthread_create(&thread, NULL, handleClient, (void*)&client_fd);
+		pthread_create(&thread, NULL, handleClient, (void*)client_fd);
 	} 
 
 	//Unreachable, program is closed using ctrl+C
