@@ -13,13 +13,14 @@ struct sockaddr_in serverAddress;
 
 void HELLO(int client_fd, char* buffer, int* sessionPtr)
 {
+	printf("Handling HELLO\n");
 
 	//Handles HELLO command which creates a new session
 	//session should be 1 if session setup already, 0 if not setup
 
 	//Don't forget to check if command is HELLO, rn, we've only checked if HELLO is there, it may be HELLOQ
 
-	char reply[] = "OK!"; //server only says OK! with message or ERR with error message
+	char reply[] = "HELLO DUMBv0 ready!";
 	send(client_fd, reply, sizeof(char) * ((unsigned)strlen(reply)+1), 0);
 	return;
 }
@@ -36,15 +37,22 @@ int getCommand(int client_fd, char* buffer)
 	ssize_t readBytes = 0;
 	ssize_t bytes = 5;
 
+	printf("\tReading command\n");
+
 	//Reads message until no more bytes found or 5 bytes read
 	//5 bytes is the command length
+	memset(buffer, '\0', 1024);
 	do {
 		readBytes = read(client_fd, buffer, bytes);
 		bytes -= readBytes;
-	} while (bytes > 0 && readBytes > 0);
+		printf("\tRead %d\n", readBytes);
+	} while (bytes > 0 && readBytes != 0);
 
 	if (bytes > 0) {
 		return 1; //command is too short
+	}
+	if (readBytes < 0) {
+		return 2; //error
 	}
 	return 0;
 }
@@ -64,11 +72,16 @@ void* handleClient(void* args)
 
 	while(1) {
 		//Reads message command into buffer
-		if (getCommand(client_fd, buffer)) {
+		int e = getCommand(client_fd, buffer);
+		printf("\t%s\n", buffer);
+		if (e == 1) {
+			printf("Command too small\n");
 			//read all bytes, but not enough bytes for a command
 			//reply an error
+		} else if (e == 2) {
+			printf("Error reading command\n");
+			break;
 		} else {
-
 			//Check what command is inputted
 			if (strcmp(buffer, "HELLO") == 0) {
 				HELLO(client_fd, buffer, &session);
@@ -130,7 +143,6 @@ int main(int argc, char * argv[])
 		pthread_t thread;
 		pthread_create(&thread, NULL, handleClient, (void*)&client_fd);
 	} 
-
 
 	//Unreachable, program is closed using ctrl+C
 	return 0; 

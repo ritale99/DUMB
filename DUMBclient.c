@@ -1,37 +1,43 @@
-#include <stdio.h> 
+#include <stdio.h>
 #include <sys/socket.h>
-#include <netinet/in.h> 
-#include <string.h> 
+#include <netinet/in.h>
+#include <errno.h>
+#include <string.h>
 
 int client_fd;
 struct sockaddr_in clientAddress;
 
-int attemptConnect(socklen_t addr_size, char* buffer)
+int attemptConnect(char* buffer)
 {
 	//Attempt connect 3x
 	int i;
 	for (i=0; i<3; ++i) {
-		if (connect(client_fd, (struct sockaddr*)&clientAddress, addr_size) >= 0) { printf("trying?");
+		printf("Connect Attempt %d\n", i);
+		if (connect(client_fd, (struct sockaddr*)&clientAddress, sizeof(clientAddress)) == 0) {
 			//On connect, send HELLO
+			printf("Connected\n");
 			send(client_fd, "HELLO", 6, 0);
 			memset(buffer, '\0', 1024);
 
 			int bytes = 20;
 			int c = 0;
 			do {
-				c = recv(client_fd, buffer+(3-bytes), bytes, 0);
+				c = recv(client_fd, buffer + (20 - bytes), bytes, 0);
 				bytes -= c;
+				printf("Read %d bytes\n", c);
 			} while (bytes > 0 && c > 0);
 
 			//Check if server reply is correct
-			if (strcmp(buffer, "OK!") == 0) {
+			if (strcmp(buffer, "HELLO DUMBv0 ready!") == 0) {
 				//change this print statement
-				printf("Connection accepted\n");
+				printf("HELLO accepted\n");
 				return 0;
 			} else {
-				printf("Connection failed: HELLO failed\n");
+				printf("HELLO failed\n");
 				return 1;
 			}
+		} else {
+			printf("\t%d\n", errno);
 		}
 	}
 	printf("Connection failed\n");
@@ -40,6 +46,7 @@ int attemptConnect(socklen_t addr_size, char* buffer)
 
 void handleInput(char* input)
 {
+	printf("Handling input\n");
 	if (strcmp(input, "quit")) {
 		
 	} else if (strcmp(input, "create")) {
@@ -58,6 +65,7 @@ void handleInput(char* input)
 	} else if (strcmp(input, "put")) {
 
 	}
+	return;
 }
 
 int handleReply(char* input, char* reply)
@@ -65,6 +73,7 @@ int handleReply(char* input, char* reply)
 	//get reply
 	memset(reply, '\0', 1024);
 	
+	printf("Handling reply\n");
 	int bytes = 3;
 	int c = 0;
 	do {
@@ -138,6 +147,7 @@ void setupClient(uint16_t port, in_addr_t address)
 
 	//Buffer of zeros
 	memset(clientAddress.sin_zero, '\0', sizeof(clientAddress.sin_zero));
+	printf("Setup Client\n");
 
 	return;
 }
@@ -146,16 +156,15 @@ int main(int argc, char* argv[])
 {
 	char input[1024];
 	char reply[1024];
-	socklen_t addr_size = sizeof clientAddress;
+
 	setupClient(htons(atoi(argv[2])), inet_addr(argv[1]));
-//	socklen_t addr_size = sizeof(clientAddress.sin_addr.s_addr);
-//	socklen_t addr_size = sizeof clientAddress;
+
 	//Attempt to connect to server
-	if (attemptConnect(addr_size, reply) == 1) return 0;
+	if (attemptConnect(reply) == 1) return 0;
 
 	//continue entering messages
 	while(1) {
-		printf("Enter the Message\n");
+		printf("\nEnter a command:\n");
 		memset(input, '\0', 1024);
 		//takes a command as input
 		scanf("%s", input);
