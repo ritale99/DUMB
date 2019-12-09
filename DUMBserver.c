@@ -155,11 +155,15 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	return;
 }
 //utility function to create new empty inbox struct
-struct inbox* createBox(char *buffer){
+struct inbox* createBox(char** buffer, size_t* bufferSize){
 	struct inbox* messageBox = (struct inbox*)malloc(sizeof(struct inbox));
 	messageBox->message1 = NULL;
-	messageBox->name = buffer;
-	messageBox->next = NULL; 
+	messageBox->name = *buffer;
+	messageBox->next = NULL;
+
+	//reset buffer
+	*buffer = NULL;
+	*bufferSize = 0;
 
 	//if there are no Inboxes
 	if (inbox1 == NULL){
@@ -199,22 +203,23 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 		printf("\tProblem readingNBytes\n");
 		return;
 	}
-	/*	
+		
 	struct inbox* target = inbox1;
 	while (target != NULL){
+		printf("Comparing %s with %s\n", (*target).name, *buffer);
 		if (strcmp((*target).name, *buffer) == 0){
 			//ERROR: box name exists already
 			char reply[] = "ER:EXIST";
 			send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
-			printf("YERRRRR\n");
+			printf("\tCreate failed: box name is used\n");
 			return;
 		}
 	
 		target = (*target).next;
 	}
-	*/
-	print("\tCreating: %s\n", *buffer);
-	createBox(*buffer);
+	
+	printf("\tCreating: %s\n", *buffer);
+	createBox(buffer, bufferSize);
 	printf("Created Box\n");
 	char reply[] = "OK!";
 	send(client_fd, reply, (unsigned)strlen(reply)+1,0);	 
@@ -281,7 +286,7 @@ void* handleClient(void* args)
 	pthread_detach(pthread_self());
 
 	int client_fd = *(int*)args; 
-	printf(">Handling %d\n", client_fd);
+	printf("Handling %d\n", client_fd);
 	struct inbox* currentInbox = NULL;
 	struct message* currentMsg = NULL;
 
