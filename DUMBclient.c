@@ -6,6 +6,7 @@
 #include <string.h>
 #include <math.h>
 
+//Client code
 int client_fd;
 struct sockaddr_in clientAddress;
 
@@ -76,12 +77,27 @@ void inputString(size_t* size, char** str)
 void handleInput(char** input, size_t* size)
 {
 	printf("Handling input\n");
+	
 	if (strcmp(*input, "quit") == 0) { //s
 		
-	} else if (strcmp(*input, "create") == 0) { //r
-		
+	} else if (strcmp(*input, "create") == 0) { 
+		char *boxName;
+		size_t nameSize;
+		printf("Please input the name of the message box to create between 5 and 25 characters:\n");
+		inputString(&nameSize, &boxName);
+		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize;
+ 		*input = realloc(*input, *size);
+		sprintf(*input, "%s!%d!%s", "CREAT", nameSize, boxName);
+		free(boxName);	
 	} else if (strcmp(*input, "delete") == 0) { //r
-		
+		char *boxName;
+		size_t nameSize;
+		printf("Please input the name of the message box to delete:\n");
+		inputString(&nameSize, &boxName);
+		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize;
+ 		*input = realloc(*input, *size);
+		sprintf(*input, "%s!%d!%s", "DELBX", nameSize, boxName);
+		free(boxName);
 	} else if (strcmp(*input, "open") == 0) { //s
 		char* boxName;
 		size_t nameSize;
@@ -99,13 +115,30 @@ void handleInput(char** input, size_t* size)
 		//free inputted name of box
 		free(boxName);
 	} else if (strcmp(*input, "close") == 0) { //s
-		
+		char *boxName;
+		size_t nameSize;
+		printf("Please input the name of the message box to delete:\n");
+		inputString(&nameSize, &boxName);
+		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize;
+ 		*input = realloc(*input, *size);
+		sprintf(*input, "%s!%d!%s", "CLSBX", nameSize, boxName);
+		free(boxName);
 	} else if (strcmp(*input, "next") == 0) { //r
 		
+
 	} else if (strcmp(*input, "put") == 0) { //s
-		
-		printf("Please input a message:\n");
+		char *boxName;
+		size_t nameSize;
+		printf("Please input your message\n");
+		inputString(&nameSize, &boxName);
+		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize;
+ 		*input = realloc(*input, *size);
+		sprintf(*input, "%s!%d!%s", "PUTMG", nameSize, boxName);
+		free(boxName);	
+	} else if (strcmp(*input, "help") == 0){
+		printf("Commands are:\n\tcreate\n\tdelete\n\topen\n\tclose\n\tnext\n\tinput\n");
 	}
+		
 	return;
 }
 

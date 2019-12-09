@@ -6,7 +6,8 @@
 #include <string.h> 
 #include <errno.h>
 
-int numConnections = 5;
+//Server Code
+
 int server_fd;
 struct sockaddr_in serverAddress;
 
@@ -77,7 +78,7 @@ int readNBytes(int client_fd, char** buffer, size_t* bufferSize, int n)
 	return 0;
 }
 
-void HELLO(int client_fd, char** buffer, size_t* bufferSize, int* sessionPtr)
+void HELLO(int client_fd, char** buffer, size_t* bufferSize)
 {
 	printf("Handling HELLO for %d\n", client_fd);
 
@@ -90,14 +91,12 @@ void HELLO(int client_fd, char** buffer, size_t* bufferSize, int* sessionPtr)
 	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 	return;
 }
-
-void GDBYE(int client_fd, char** buffer, size_t* bufferSize, int* sessionPtr)
+void GDBYE(int client_fd, char** buffer, size_t* bufferSize)
 {
 	
 	return;
 }
-
-void OPNBX(int client_fd, char** buffer, size_t* bufferSize, int* sessionPtr, struct inbox** currentInbox)
+void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
 {
 	printf("Handling OPNBX for %d\n", client_fd);
 
@@ -147,6 +146,7 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, int* sessionPtr, st
 	(*targetInbox).user = client_fd;
 	pthread_mutex_unlock(&((*targetInbox).lock));
 
+	//Sets target inbox to current and replies to client
 	*currentInbox = targetInbox;
 	printf("\tOpened inbox\n");
 	char reply[] = "OK!";
@@ -154,7 +154,31 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, int* sessionPtr, st
 
 	return;
 }
-
+void CREAT(int client_fd, char** buffer, size_t* bufferSize)
+{
+	printf("Good, attempting to create a box\n");
+	return;
+}
+void DELBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
+{
+	printf("Good, attempting to delete a box\n");
+	return;
+}
+void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
+{
+	printf("Good, attempting to close a box\n");
+	return;
+}
+void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
+{
+	printf("Good, attempting to get next message\n");
+	return;
+}
+void PUTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox)
+{
+	printf("Good, attempting to place new message\n");
+	return;
+}
 
 int getCommand(int client_fd, char** buffer, size_t* bufferSize)
 {
@@ -196,8 +220,8 @@ void* handleClient(void* args)
 
 	int client_fd = *(int*)args; 
 	printf(">Handling %d\n", client_fd);
-	int session = 0;
 	struct inbox* currentInbox = NULL;
+	struct message* currentMsg = NULL;
 
 	//Initialize buffer
 	char* buffer = NULL;
@@ -220,13 +244,22 @@ void* handleClient(void* args)
 		} else {
 			//Check what command is inputted
 			if (strcmp(buffer, "HELLO") == 0) {
-				HELLO(client_fd, &buffer, &bufferSize, &session);
+				HELLO(client_fd, &buffer, &bufferSize);
 			} else if (strcmp(buffer, "GDBYE") == 0) {
-				GDBYE(client_fd, &buffer, &bufferSize, &session);
-				if (session == 0) break;
+				GDBYE(client_fd, &buffer, &bufferSize);
 			} else if (strcmp(buffer, "OPNBX") == 0) {
-				OPNBX(client_fd, &buffer, &bufferSize, &session, &currentInbox);
-			}
+				OPNBX(client_fd, &buffer, &bufferSize, &currentInbox, &currentMsg);
+			} else if (strcmp(buffer, "CREAT") == 0){
+				CREAT(client_fd, &buffer, &bufferSize);
+			} else if (strcmp(buffer, "NXTMG") == 0){
+				NXTMG(client_fd, &buffer, &bufferSize, &currentInbox, &currentMsg);
+			} else if (strcmp(buffer, "PUTMG") == 0){
+				PUTMG(client_fd, &buffer, &bufferSize, &currentInbox);
+			} else if (strcmp(buffer, "CLSBX") == 0){
+				CLSBX(client_fd, &buffer, &bufferSize, &currentInbox, &currentMsg);
+			} else if (strcmp(buffer, "DELBX") == 0){
+				DELBX(client_fd, &buffer, &bufferSize, &currentInbox, &currentMsg);
+			}  
 		}
 	}
 	if (buffer != NULL) free(buffer);
