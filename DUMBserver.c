@@ -154,9 +154,70 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 
 	return;
 }
+//utility function to create new empty inbox struct
+struct inbox* createBox(char *buffer){
+	struct inbox* messageBox = (struct inbox*)malloc(sizeof(struct inbox));
+	messageBox->message1 = NULL;
+	messageBox->name = buffer;
+	messageBox->next = NULL; 
+
+	//if there are no Inboxes
+	if (inbox1 == NULL){
+		inbox1 = messageBox;
+		return messageBox;
+	} 
+	struct inbox* head = inbox1;
+	
+	//append the end of the inbox list
+	while(head->next!=NULL){
+		head = head->next;
+	}
+	
+	head->next = messageBox;
+
+	return messageBox;
+}
+
 void CREAT(int client_fd, char** buffer, size_t* bufferSize)
+
 {
 	printf("Good, attempting to create a box\n");
+	
+	//Read length of box name
+	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
+	//error for length of name of messagebox
+	//must also start with alphabetic character
+	if (messageSize>24 || messageSize<4){	
+		
+	}
+	
+
+	printf("\tInbox name size is %d\n", messageSize);
+	
+	//Read box name from client message
+	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
+		printf("\tProblem readingNBytes\n");
+		return;
+	}
+	/*	
+	struct inbox* target = inbox1;
+	while (target != NULL){
+		if (strcmp((*target).name, *buffer) == 0){
+			//ERROR: box name exists already
+			char reply[] = "ER:EXIST";
+			send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
+			printf("YERRRRR\n");
+			return;
+		}
+	
+		target = (*target).next;
+	}
+	*/
+	print("\tCreating: %s\n", *buffer);
+	createBox(*buffer);
+	printf("Created Box\n");
+	char reply[] = "OK!";
+	send(client_fd, reply, (unsigned)strlen(reply)+1,0);	 
 	return;
 }
 void DELBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
@@ -173,6 +234,7 @@ void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 {
 	printf("Good, attempting to get next message\n");
 	return;
+
 }
 void PUTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox)
 {

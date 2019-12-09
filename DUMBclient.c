@@ -85,7 +85,7 @@ void handleInput(char** input, size_t* size)
 		size_t nameSize;
 		printf("Please input the name of the message box to create between 5 and 25 characters:\n");
 		inputString(&nameSize, &boxName);
-		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize;
+		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize+1;
  		*input = realloc(*input, *size);
 		sprintf(*input, "%s!%d!%s", "CREAT", nameSize, boxName);
 		free(boxName);	
@@ -190,6 +190,7 @@ int handleReply(char* input, char* reply)
 
 		if (strcmp(reply, "ER:EXIST")) {
 			//Attempt to create inbox with a used name
+			printf("Attempting to create inbox with a used name");
 		} else if (strcmp(reply, "ER:WHAT?")) {
 			//Broken or malformed input
 		} else if (strcmp(reply, "ER:NEXST")) {
@@ -200,9 +201,9 @@ int handleReply(char* input, char* reply)
 			//Attempt to read empty inbox
 		} else if (strcmp(reply, "ER:NOOPN")) {
 			//Attempt to read/write/close with no inbox open
-		} else if (strcmp(reply, "ER:NOTMY")) {
+		} else if (strcmp(reply, "ER:NOTMY")) { 
 			//Attempt to delete not empty inbox
-		}
+		} 
 	}
 	return 0;
 }
