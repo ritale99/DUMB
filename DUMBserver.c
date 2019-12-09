@@ -5,7 +5,7 @@
 #include <netinet/in.h>
 #include <string.h> 
 #include <errno.h>
-
+//server code
 int numConnections = 5;
 int server_fd;
 struct sockaddr_in serverAddress;
@@ -24,19 +24,42 @@ void HELLO(int client_fd, char* buffer, int* sessionPtr)
 	return;
 }
 
+void CREAT(int client_fd, char* buffer, int* sessionPtr)
+{	
+	printf("Good, attempting to create a box\n");
+	return;
+}
+
 void GDBYE(int client_fd, char* buffer, int* sessionPtr)
 {
 	
 	return;
 }
-
-void OPNBX(int client_fd, char* buffer, int* sessionPtr)
+void DELBX(int client_fd, char* buffer, int* sessionPtr)
 {
-	printf("Good, attempting to open a box");
+	printf("Good, attempting to delete a box\n");
 	return;
 }
-
-
+void OPNBX(int client_fd, char* buffer, int* sessionPtr)
+{
+	printf("Good, attempting to open a box\n");
+	return;
+}
+void CLSBX(int client_fd, char* buffer, int* sessionPtr)
+{
+	printf("Good, attempting to close a box\n");
+	return;
+}
+void NXTMG(int client_fd, char* buffer, int* sessionPtr)
+{
+	printf("Good, attempting to get next message\n");
+	return;
+}
+void PUTMG(int client_fd, char* buffer, int* sessionPtr)
+{
+	printf("Good, attempting to place new message\n");
+	return;
+}
 int getCommand(int client_fd, char* buffer)
 {
 	ssize_t readBytes = 0;
@@ -92,12 +115,24 @@ void* handleClient(void* args)
 			//Check what command is inputted
 			if (strcmp(buffer, "HELLO") == 0) {
 				HELLO(client_fd, buffer, &session);
-			} else if (strcmp(buffer, "GDBYE") == 0) {
+			} else if (strncmp(buffer, "GDBYE",5) == 0) {
 				GDBYE(client_fd, buffer, &session);
 				if (session == 0) break;
-			} else if (strcmp(buffer, "OPNBX") == 0) {
+			} else if (strncmp(buffer, "OPNBX",5) == 0) {
 				OPNBX(client_fd, buffer, &session);
-			}
+			} else if (strncmp(buffer,"CREAT",5)==0){
+				CREAT(client_fd,buffer, &session);
+			} else if (strncmp(buffer,"NXTMG",5)==0){
+				NXTMG(client_fd, buffer, &session);
+			} else if (strncmp(buffer, "PUTMG",5)==0){
+				PUTMG(client_fd,buffer, &session); 
+			} else if (strncmp(buffer, "CLSBX",5)==0){
+				CLSBX(client_fd,buffer, &session);
+			} else if (strncmp(buffer, "DELBX", 5 )==0){
+				DELBX(client_fd, buffer, &session);
+			}  
+			
+			
 		}
 	}
 	
