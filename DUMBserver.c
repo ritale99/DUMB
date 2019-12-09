@@ -10,7 +10,74 @@ int numConnections = 5;
 int server_fd;
 struct sockaddr_in serverAddress;
 
-void HELLO(int client_fd, char* buffer, int* sessionPtr)
+struct message {
+	char* message; //String
+	struct message* next; //Next message
+};
+struct inbox {
+	char* name; //Name of inbox
+	struct message* message1; //Pointer to message of select inbox
+	pthread_mutex_t lock; //Locks the int busy
+	int user; //0 if not in use, client_id if in use
+	struct inbox* next; //Pointer to next inbox
+};
+struct inbox* inbox1 = NULL; //Head of inbox list
+
+int getLengthFromMessage(int client_fd, char** buffer, size_t* bufferSize)
+{
+	memset(*buffer, '\0', *bufferSize);
+
+	*bufferSize = 4;
+	size_t len = 0;
+	int readBytes = 0;
+	*buffer = realloc(*buffer, *bufferSize);
+
+	//Read until ! is found
+	do {
+		readBytes = read(client_fd, (*buffer) + (len++), 1);
+		if (len == *bufferSize) { //Add space if at end
+			*buffer = realloc(*buffer, (*bufferSize) += 4); 
+		}
+	} while ((*buffer)[len - 1] != '!' && readBytes > 0);
+
+	if (readBytes <= 0) {
+		return -1; //Either error(<0) or EOF(0)
+	}
+	
+	(*buffer)[len - 1] = '\0';
+
+	return atoi(*buffer); //Returns as int, length of message and leaves cursor after !
+}
+
+int readNBytes(int client_fd, char** buffer, size_t* bufferSize, int n)
+{
+	printf("Reading %d bytes\n", n);
+	memset(*buffer, '\0', *bufferSize);
+
+	*bufferSize = n;
+	int readBytes = 0;
+	*buffer = realloc(*buffer, *bufferSize);
+
+	//Read n times
+	do {
+		readBytes = read(client_fd, (*buffer) + (*bufferSize) - n, n);
+		n -= readBytes;
+		printf("\tRead %d bytes\n", readBytes);
+	} while (n > 0 && readBytes > 0);
+
+	printf("\tRead %s\n", *buffer);
+
+	if (readBytes < 0) {
+		return 1; //Error, not sure why
+	}
+	if (n > 0) {
+		return 1; //given length is longer than message 
+	}
+
+	return 0;
+}
+
+void HELLO(int client_fd, char** buffer, size_t* bufferSize, int* sessionPtr)
 {
 	printf("Handling HELLO for %d\n", client_fd);
 
@@ -20,45 +87,104 @@ void HELLO(int client_fd, char* buffer, int* sessionPtr)
 	//Don't forget to check if command is HELLO, rn, we've only checked if HELLO is there, it may be HELLOQ
 
 	char reply[] = "HELLO DUMBv0 ready!";
-	send(client_fd, reply, sizeof(char) * ((unsigned)strlen(reply)+1), 0);
+	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 	return;
 }
 
-void GDBYE(int client_fd, char* buffer, int* sessionPtr)
+void GDBYE(int client_fd, char** buffer, size_t* bufferSize, int* sessionPtr)
 {
 	
 	return;
 }
 
-void OPNBX(int client_fd, char* buffer, int* sessionPtr)
+void OPNBX(int client_fd, char** buffer, size_t* bufferSize, int* sessionPtr, struct inbox** currentInbox)
 {
-	printf("Good, attempting to open a box");
+	printf("Handling OPNBX for %d\n", client_fd);
+
+	//Read length of box name
+	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
+	printf("\tInbox name size is %d\n", messageSize);
+
+	//Read box name from client message
+	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
+		printf("\tProblem readingNBytes\n");
+		return;
+	}
+	printf("\tSearching for %s\n", *buffer);
+
+	//Check if already has an inbox open
+	if (*currentInbox != NULL) {
+		printf("\tAlready has an inbox open\n");
+		char reply[] = "ER:OPEND";
+		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
+		return;
+	}
+
+	//Check each inbox for search box from start to end
+	struct inbox* targetInbox = inbox1;
+	while (targetInbox != NULL && strcmp((*targetInbox).name, *buffer) != 0) {
+		targetInbox = (*targetInbox).next;
+	}
+
+	//If currentInbox doesn't exist, target inbox doesn't exist
+	if (targetInbox == NULL) {
+		char reply[] = "ER:NEXST";
+		printf("\tInbox DNE\n");
+		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
+		return;
+	}
+	//current inbox is target inbox
+
+	//Check if current inbox is being used
+	pthread_mutex_lock(&((*targetInbox).lock));
+	if ((*targetInbox).user) {
+		pthread_mutex_unlock(&((*targetInbox).lock));
+		char reply[] = "ER:OPEND";
+		printf("\tInbox busy\n");
+		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
+		return;
+	}
+	(*targetInbox).user = client_fd;
+	pthread_mutex_unlock(&((*targetInbox).lock));
+
+	*currentInbox = targetInbox;
+	printf("\tOpened inbox\n");
+	char reply[] = "OK!";
+	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
+
 	return;
 }
 
 
-int getCommand(int client_fd, char* buffer)
+int getCommand(int client_fd, char** buffer, size_t* bufferSize)
 {
 	ssize_t readBytes = 0;
 	ssize_t bytes = 6;
 
-	printf("\tReading command of %d\n", client_fd);
+	if (bufferSize > 0) memset(*buffer, '\0', *bufferSize);
+	*buffer = realloc(*buffer, bytes);
 
-	//Reads message until no more bytes found or 5 bytes read
-	//5 bytes is the command length
-	memset(buffer, '\0', 64);
+	printf("Awaiting command of %d\n", client_fd);
+
+	//Reads message until no more bytes found or 6 bytes read
+	//5 bytes is the command length + 1 \0
+
 	do {
-		readBytes = read(client_fd, buffer + (6 - bytes), bytes);
+		readBytes = read(client_fd, (*buffer) + (6 - bytes), bytes);
 		bytes -= readBytes;
 		printf("\tRead %d bytes\n", readBytes);
-	} while (bytes > 0 && readBytes != 0);
+	} while (bytes > 0 && readBytes > 0);
 
+	(*buffer)[6 - bytes - 1] = '\0'; //sets char after command to \0
 	if (bytes > 0) {
 		return 1; //command is too short
 	}
 	if (readBytes < 0) {
 		return 2; //error
 	}
+
+	//Read 6 bytes successfully
+	//Note: read cursor is left at char 2 spaces after command, right after \0 or !
 	return 0;
 }
 
@@ -69,38 +195,41 @@ void* handleClient(void* args)
 	pthread_detach(pthread_self());
 
 	int client_fd = *(int*)args; 
-	printf("Handling %d\n", client_fd);
+	printf(">Handling %d\n", client_fd);
 	int session = 0;
+	struct inbox* currentInbox = NULL;
 
 	//Initialize buffer
-	char buffer[64];
-	memset(buffer, '\0', sizeof(char)*64);
+	char* buffer = NULL;
+	size_t bufferSize = 0;
 
 	while(1) {
 		//Reads message command into buffer
-		int e = getCommand(client_fd, buffer);
+		int e = getCommand(client_fd, &buffer, &bufferSize);
 		printf("\t%d says %s\n", client_fd, buffer);
 
 		if (e == 1) {
-			printf("Command too small\n");
+			printf("\tCommand too small\n");
 			//read all bytes, but not enough bytes for a command
-			//reply an error
+
+			char* reply = "ER!WHAT?";
+			send(client_fd, reply, sizeof(char) * ((unsigned)strlen(reply)+1), 0);
 		} else if (e == 2) {
-			printf("Error reading command\n");
+			printf("\tError reading command\n"); //not sure when this happens
 			break;
 		} else {
 			//Check what command is inputted
 			if (strcmp(buffer, "HELLO") == 0) {
-				HELLO(client_fd, buffer, &session);
+				HELLO(client_fd, &buffer, &bufferSize, &session);
 			} else if (strcmp(buffer, "GDBYE") == 0) {
-				GDBYE(client_fd, buffer, &session);
+				GDBYE(client_fd, &buffer, &bufferSize, &session);
 				if (session == 0) break;
 			} else if (strcmp(buffer, "OPNBX") == 0) {
-				OPNBX(client_fd, buffer, &session);
+				OPNBX(client_fd, &buffer, &bufferSize, &session, &currentInbox);
 			}
 		}
 	}
-	
+	if (buffer != NULL) free(buffer);
 	pthread_exit(0);
 }
 

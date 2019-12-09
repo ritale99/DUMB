@@ -90,7 +90,7 @@ void handleInput(char** input, size_t* size)
 		inputString(&nameSize, &boxName);
 
 		//sum of cmd, !, length of size, !, message
-		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize;
+		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize + 1;
 		//reallocate input to fit new input
 		*input = realloc(*input, *size);
 		//set new input
@@ -116,18 +116,19 @@ int handleReply(char* input, char* reply)
 	
 	printf("Handling reply\n");
 	int bytes = 3;
-	int c = 0;
+	int readBytes = 0;
 	do {
-		c = recv(client_fd, reply + (bytes - 3), bytes, 0);
-		bytes -= c;
-	} while (bytes > 0 && c > 0);
+		readBytes = recv(client_fd, reply + (3 - bytes), bytes, 0);
+		bytes -= readBytes;
+		printf("\tRead %d bytes\n", readBytes);
+	} while (bytes > 0 && readBytes > 0);
 
 	//Format input to ignore arguments
 	input[5] = '\0';
 
 	//On successful command
-	if (strcmp(reply, "OK!")) {
-		printf("Server replied %s\n", reply);
+	printf("\tServer replied %s\n", reply);
+	if (strcmp(reply, "OK!") == 0) {
 
 		if (strcmp(input, "GDBYE") == 0) {
 			//On successful GDBYE? no reply, I think
@@ -143,15 +144,16 @@ int handleReply(char* input, char* reply)
 			
 		}
 	//On Error
-	} else if (strcmp(reply, "ER:")) {
+	} else if (strcmp(reply, "ER:") == 0) {
 		//Get error message
-		int bytes2 = 5;
+		int bytes2 = 6;
 		do {
-			c = recv(client_fd, reply + 3 + (bytes2 - 5), bytes2, 0);
-			bytes2 -= c;
-		} while (bytes2 > 0 && c > 0);
+			readBytes = recv(client_fd, reply + 3 + (6 - bytes2), bytes2, 0);
+			bytes2 -= readBytes;
+			printf("\tRead %d bytes\n", readBytes);
+		} while (bytes2 > 0 && readBytes > 0);
 
-		printf("Server replied %s\n", reply);
+		printf("\t\t%s\n", reply);
 
 		if (strcmp(reply, "ER:EXIST")) {
 			//Attempt to create inbox with a used name
@@ -213,6 +215,7 @@ int main(int argc, char* argv[])
 		handleInput(&input, &size);
 
 		//send input to server
+		printf("\tSending %s with size %d\n", input, size);
 		send(client_fd, input, size, 0);
 
 		//receives and handles reply from server
