@@ -196,8 +196,10 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
 	//error for length of name of messagebox
 	//must also start with alphabetic character
-	if (messageSize>24 || messageSize<4){	
-		
+	if (messageSize-1>25 || messageSize-1<5){	
+		char reply [] = "ER:WHAT?";
+		send(client_fd,reply,(unsigned)strlen(reply)+1,0);
+		return;
 	}
 	
 
@@ -240,9 +242,61 @@ void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	printf("Good, attempting to close a box\n");
 	return;
 }
+
+//utility function to dequeue message FIFO algorithm
+char* dequeue(struct inbox** currentInbox, char** buffer, size_t* bufferSize){
+	
+	struct message* temp = (*currentInbox)->message1;
+	char* mess = temp->message;
+	
+	(*currentInbox)->message1 = (*currentInbox)->message1->next; 
+	
+	
+	free(temp);
+	
+	return mess;
+}
 void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
 {
 	printf("Good, attempting to get next message\n");
+	
+	//no box is open
+	if (*currentInbox==NULL){
+		char reply[] = "ER:NOOPN";
+		printf("No message box is open to get the next message from\n");
+		send(client_fd,reply,(unsigned)strlen(reply)+1,0);
+		return;
+
+	}
+
+	pthread_mutex_lock(&((*currentInbox)->lock));
+	//box not open
+	if((*currentInbox)->user == 0){
+		pthread_mutex_unlock(&((*currentInbox)->lock));
+		char reply[] = "ER:NOOPN";
+		printf("No message box is open\n");
+		send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
+		return;
+
+	}
+ 	//is this how to use the mutex locking 
+	pthread_mutex_unlock(&((*currentInbox)->lock));
+	
+	//there are no messages in the inbox
+	if ((*currentInbox)->message1 == NULL){
+		char reply[] = "ER:EMPTY";
+		printf("No message in inbox\n");
+		send(client_fd, reply, (unsigned)strlen(reply)+1,0);	
+		//is this right under this?
+		*buffer = NULL;
+		*bufferSize = 0;
+		return;
+	}
+
+	printf("Attaining message\n");
+	char* removedMessage = dequeue(currentInbox, buffer, bufferSize);
+	printf("The message: %s, was removed", removedMessage);
+
 	return;
 
 }
@@ -275,7 +329,7 @@ void enqueue(struct inbox** currentInbox, char** buffer, size_t* bufferSize){
 	
 	return;
 
-} 
+}
 
 //check open box mutex
 void PUTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox)

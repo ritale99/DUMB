@@ -126,7 +126,10 @@ void handleInput(char** input, size_t* size)
 		sprintf(*input, "%s!%d!%s", "CLSBX", nameSize, boxName);
 		free(boxName);
 	} else if (strcmp(*input, "next") == 0) { //r
-		
+		*size = 6;
+		*input = realloc(*input, *size);
+		sprintf(*input, "%s", "NXTMG");
+
 
 	} else if (strcmp(*input, "put") == 0) { //s
 		char *boxName;
@@ -187,20 +190,21 @@ int handleReply(char* input, char* reply)
 
 		printf("\t\t%s\n", reply);
 
-		if (strcmp(reply, "ER:EXIST")) {
+		if (strcmp(reply, "ER:EXIST")==0) {
 			//Attempt to create inbox with a used name
-			printf("Attempting to create inbox with a used name");
-		} else if (strcmp(reply, "ER:WHAT?")) {
+			printf("Attempting to create inbox with a used name\n");
+		} else if (strcmp(reply, "ER:WHAT?")==0) {
 			//Broken or malformed input
-		} else if (strcmp(reply, "ER:NEXST")) {
+			printf("Malformed Input\n");
+		} else if (strcmp(reply, "ER:NEXST")==0) {
 			//Attempt to open/delete not existing inbox
-		} else if (strcmp(reply, "ER:OPEND")) {
+		} else if (strcmp(reply, "ER:OPEND")==0) {
 			//Attempt to open/delete already opened inbox
-		} else if (strcmp(reply, "ER:EMPTY")) {
+		} else if (strcmp(reply, "ER:EMPTY")==0) {
 			//Attempt to read empty inbox
-		} else if (strcmp(reply, "ER:NOOPN")) {
+		} else if (strcmp(reply, "ER:NOOPN")==0) {
 			//Attempt to read/write/close with no inbox open
-		} else if (strcmp(reply, "ER:NOTMY")) { 
+		} else if (strcmp(reply, "ER:NOTMY")==0) { 
 			//Attempt to delete not empty inbox
 		} 
 	} else if (bytes == 3 && readBytes == 0) {
