@@ -249,47 +249,72 @@ void enqueue(struct inbox** currentInbox, char** buffer, size_t* bufferSize){
 	temp =(struct message*)malloc(sizeof(struct message));
 	temp -> message = *buffer;
 
-	//enqueue the new node onto currentInbox
-
 	//there are no messages in the inbox
 	if ((*currentInbox)->message1 == NULL){
 		(*currentInbox)->message1 = temp; 
 		temp->next = NULL;
+		*buffer = NULL;
+		*bufferSize = 0;
+		return;
 	}
+	struct message* pointer = (*currentInbox)->message1;
+	//append to end of message queue
+	while(pointer->next != NULL) {
+		pointer = pointer->next;	
+	}
+	pointer->next = temp;
 	
 	//reset buffer
 	*buffer = NULL;
-	*bufferSize =0;
+	*bufferSize = 0;
+	
+	return;
 
 } 
 
-//watch mutex lock
+//check open box mutex
 void PUTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox)
 {
 	printf("Good, attempting to place new message\n");
-	
+
+	//Read length of box name
+	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
+
+	printf("\tMessage size is %d\n", messageSize);
+
+	//Read box name from client message
+	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
+		printf("\tProblem readingNBytes\n");
+		return;
+	}
+
 	//no box is open
 	if (*currentInbox == NULL){
 		char reply[] = "ER:NOOPN";
 		printf("No message box is open\n");
 		send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
 		return;
-	} 
-	//Read length of message
-	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
-	printf("\tMessage size is %d\n", messageSize);
-	
-	//Read message name from client message
-	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
-		printf("\tProblem readingNBytes\n");
-		return;
 	}
 	
-	printf("Placing Message");
-	enqueue(currentInbox,buffer,bufferSize);
-	printf("Placed Message");	
-	
+	pthread_mutex_lock(&((*currentInbox)->lock));
+	//box not open
+	if((*currentInbox)->user == 0){
+		pthread_mutex_unlock(&((*currentInbox)->lock));
+		char reply[] = "ER:NOOPN";
+		printf("No message box is open\n");
+		send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
+		return;
 
+	}
+ 	//is this how to use the mutex locking 
+	pthread_mutex_unlock(&((*currentInbox)->lock));
+
+	printf("Placing Message\n");
+	enqueue(currentInbox,buffer,bufferSize);
+	printf("Placed Message\n");	
+	
+	char reply[] = "OK!";
+	send(client_fd, reply, (unsigned)strlen(reply)+1,0);	
 	return;
 }
 
