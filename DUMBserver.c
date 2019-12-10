@@ -93,7 +93,14 @@ void HELLO(int client_fd, char** buffer, size_t* bufferSize)
 }
 void GDBYE(int client_fd, char** buffer, size_t* bufferSize)
 {
+	printf("Handling GDBYE for %d\n", client_fd);
+
+	//close socket
+	close(client_fd);
 	
+	free(*buffer);
+	printf("Client %d disconnected\n", client_fd);
+	pthread_exit(0);
 	return;
 }
 void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
@@ -375,6 +382,8 @@ void* handleClient(void* args)
 			}  
 		}
 	}
+
+	//Not reached
 	if (buffer != NULL) free(buffer);
 	pthread_exit(0);
 }

@@ -79,13 +79,15 @@ void handleInput(char** input, size_t* size)
 	printf("Handling input\n");
 	
 	if (strcmp(*input, "quit") == 0) { //s
-		
+		*size = 6;
+		*input = realloc(*input, *size);
+		sprintf(*input, "%s", "GDBYE");
 	} else if (strcmp(*input, "create") == 0) { 
 		char *boxName;
 		size_t nameSize;
 		printf("Please input the name of the message box to create between 5 and 25 characters:\n");
 		inputString(&nameSize, &boxName);
-		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize+1;
+		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize + 1;
  		*input = realloc(*input, *size);
 		sprintf(*input, "%s!%d!%s", "CREAT", nameSize, boxName);
 		free(boxName);	
@@ -162,10 +164,7 @@ int handleReply(char* input, char* reply)
 	//On successful command
 	printf("\tServer replied %s\n", reply);
 	if (strcmp(reply, "OK!") == 0) {
-
-		if (strcmp(input, "GDBYE") == 0) {
-			//On successful GDBYE? no reply, I think
-		} else if (strcmp(input, "CREAT") == 0) {
+		if (strcmp(input, "CREAT") == 0) {
 			//On successful CREAT
 		} else if (strcmp(input, "OPNBX") == 0) {
 			//ON successful OPNBX
@@ -204,6 +203,10 @@ int handleReply(char* input, char* reply)
 		} else if (strcmp(reply, "ER:NOTMY")) { 
 			//Attempt to delete not empty inbox
 		} 
+	} else if (bytes == 3 && readBytes == 0) {
+		//Connection closed
+		printf("Connection closed.\n");
+		exit(0);
 	}
 	return 0;
 }
