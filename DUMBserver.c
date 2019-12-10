@@ -241,9 +241,55 @@ void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	return;
 
 }
+
+//utility function to enqueue a message
+void enqueue(struct inbox** currentInbox, char** buffer, size_t* bufferSize){
+	//create the message node
+	struct message* temp;
+	temp =(struct message*)malloc(sizeof(struct message));
+	temp -> message = *buffer;
+
+	//enqueue the new node onto currentInbox
+
+	//there are no messages in the inbox
+	if ((*currentInbox)->message1 == NULL){
+		(*currentInbox)->message1 = temp; 
+		temp->next = NULL;
+	}
+	
+	//reset buffer
+	*buffer = NULL;
+	*bufferSize =0;
+
+} 
+
+//watch mutex lock
 void PUTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox)
 {
 	printf("Good, attempting to place new message\n");
+	
+	//no box is open
+	if (*currentInbox == NULL){
+		char reply[] = "ER:NOOPN";
+		printf("No message box is open\n");
+		send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
+		return;
+	} 
+	//Read length of message
+	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
+	printf("\tMessage size is %d\n", messageSize);
+	
+	//Read message name from client message
+	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
+		printf("\tProblem readingNBytes\n");
+		return;
+	}
+	
+	printf("Placing Message");
+	enqueue(currentInbox,buffer,bufferSize);
+	printf("Placed Message");	
+	
+
 	return;
 }
 
