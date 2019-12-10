@@ -248,13 +248,14 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	printf("Good, attempting to delete a box\n");
 	return;
 }
+//might need to add in another mutex here
 void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
 {
 	printf("Good, attempting to close a box\n");
 	
 	//No box open
 	if(*currentInbox == NULL){
-		printf("No box open");
+		printf("No box open\n");
 		char reply[] = "ER:NOOPN";
 		send(client_fd,reply, (unsigned)strlen(reply) + 1, 0);
 		return;
@@ -270,8 +271,26 @@ void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 		return;
 	}
 	
+	//since the user is required to enter the name of the message box to close:
+		//must check if the currently open box is the same one the user is attempting to close
+	if(strcmp((*currentInbox)->name, *buffer)!=0){
+		printf("Attempting to close incorrect inbox\n");
+		char reply [] = "ER:NOOPN";
+		send(client_fd,reply, (unsigned)strlen(reply)+1,0 );
+		return;
+	}
+	
+	//close the currently open box
+	else{
+		pthread_mutex_lock(&((**currentInbox).lock));
+		(**currentInbox).user =0; 
+		pthread_mutex_unlock(&((**currentInbox).lock)); 
+		*currentInbox = NULL;
+	}
+	
 	char reply []= "OK!";
 	send(client_fd,reply, (unsigned)strlen(reply)+ 1, 0);
+	printf("Closed inbox: %s\n", *buffer);
 	return;
 }
 
