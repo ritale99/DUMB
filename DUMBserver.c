@@ -10,7 +10,7 @@
 
 int server_fd;
 struct sockaddr_in serverAddress;
-
+pthread_mutex_t lockList;
 struct message {
 	char* message; //String
 	struct message* next; //Next message
@@ -242,6 +242,27 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
 {
 	printf("Good, attempting to close a box\n");
+	
+	//No box open
+	if(*currentBox == NULL){
+		printf("No box open");
+		char reply[] = "ER:NOOPN";
+		send(client_fd,reply, (unsigned)strlen(reply), + 1, 0);
+		return;
+	}	
+
+	//Read length of box name
+	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
+	printf("\tInbox name size is %d\n", messageSize);
+
+	//Read box name from client message
+	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
+		printf("\tProblem readingNBytes\n");
+		return;
+	}
+	
+	char [] reply = "OK!";
+	send(client_fd,reply, (unsigned)strlen(reply), + 1, 0);
 	return;
 }
 
@@ -253,7 +274,7 @@ char* dequeue(struct inbox** currentInbox, char** buffer, size_t* bufferSize){
 	
 	(*currentInbox)->message1 = (*currentInbox)->message1->next; 
 	
-	
+	//should be locking any mutex here??	
 	free(temp);
 	
 	return mess;
@@ -298,7 +319,8 @@ void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	printf("Attaining message\n");
 	char* removedMessage = dequeue(currentInbox, buffer, bufferSize);
 	printf("The message: %s, was removed", removedMessage);
-
+	char [] reply = "OK!";
+	send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
 	return;
 
 }
