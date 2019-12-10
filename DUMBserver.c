@@ -118,32 +118,23 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	}
 	printf("\tSearching for %s\n", *buffer);
 
-	//Check if already has an inbox open
-	if (*currentInbox != NULL) {
-		printf("\tAlready has an inbox open\n");
-		char reply[] = "ER:OPEND";
-		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
-		return;
-	}
-
 	//Check each inbox for search box from start to end
 	struct inbox* targetInbox = inbox1;
 	while (targetInbox != NULL && strcmp((*targetInbox).name, *buffer) != 0) {
 		targetInbox = (*targetInbox).next;
 	}
 
-	//If currentInbox doesn't exist, target inbox doesn't exist
+	//If targetInbox doesn't exist, target inbox doesn't exist
 	if (targetInbox == NULL) {
 		char reply[] = "ER:NEXST";
 		printf("\tInbox DNE\n");
 		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
 	}
-	//current inbox is target inbox
 
-	//Check if current inbox is being used
+	//Check if target inbox is being used
 	pthread_mutex_lock(&((*targetInbox).lock));
-	if ((*targetInbox).user) {
+	if ((*targetInbox).user != NULL) {
 		pthread_mutex_unlock(&((*targetInbox).lock));
 		char reply[] = "ER:OPEND";
 		printf("\tInbox busy\n");
@@ -152,6 +143,13 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	}
 	(*targetInbox).user = client_fd;
 	pthread_mutex_unlock(&((*targetInbox).lock));
+
+	//If already has an inbox open, close to let others have access before changing to new one
+	if (*currentInbox != NULL) {
+		pthread_mutex_lock(&((**currentInbox).lock));
+		(**currentInbox).user = 0;
+		pthread_mutex_unlock(&((**currentInbox).lock));
+	}
 
 	//Sets target inbox to current and replies to client
 	*currentInbox = targetInbox;
@@ -162,7 +160,8 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	return;
 }
 //utility function to create new empty inbox struct
-struct inbox* createBox(char** buffer, size_t* bufferSize){
+struct inbox* createBox(char** buffer, size_t* bufferSize)
+{
 	struct inbox* messageBox = (struct inbox*)malloc(sizeof(struct inbox));
 	messageBox->message1 = NULL;
 	messageBox->name = *buffer;
@@ -190,7 +189,6 @@ struct inbox* createBox(char** buffer, size_t* bufferSize){
 }
 
 void CREAT(int client_fd, char** buffer, size_t* bufferSize)
-
 {
 	printf("Good, attempting to create a box\n");
 	
