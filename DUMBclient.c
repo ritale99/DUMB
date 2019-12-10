@@ -121,7 +121,7 @@ void handleInput(char** input, size_t* size)
 		size_t nameSize;
 		printf("Please input the name of the message box to delete:\n");
 		inputString(&nameSize, &boxName);
-		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize;
+		*size = 5 + 2 + floor(log10((int)nameSize)) + 1 + nameSize;
  		*input = realloc(*input, *size);
 		sprintf(*input, "%s!%d!%s", "CLSBX", nameSize, boxName);
 		free(boxName);
