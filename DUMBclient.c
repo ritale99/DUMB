@@ -167,6 +167,9 @@ int handleReply(char* input, char* reply)
 	//On successful command
 	printf("\tServer replied %s\n", reply);
 	if (strcmp(reply, "OK!") == 0) {
+		//read the trailing \0
+		recv(client_fd, reply, 1, 0);
+
 		if (strcmp(input, "CREAT") == 0) {
 			//On successful CREAT
 		} else if (strcmp(input, "OPNBX") == 0) {

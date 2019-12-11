@@ -154,9 +154,9 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	//Sets target inbox to current and replies to client
 	*currentInbox = targetInbox;
 	printf("\tOpened inbox\n");
-	char reply[] = "OK!";
-	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 
+	char reply[] = "OK!"; //getting deallocated on return before client can read?
+	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 	return;
 }
 //utility function to create new empty inbox struct
@@ -178,8 +178,9 @@ struct inbox* createBox(char** buffer, size_t* bufferSize)
 	//if there are no Inboxes
 	if (inbox1 == NULL){
 		inbox1 = messageBox;
+		pthread_mutex_unlock(&lockList);
 		return messageBox;
-	} 
+	}
 	struct inbox* head = inbox1;
 	
 	//append to the end of the inbox list
@@ -196,7 +197,7 @@ struct inbox* createBox(char** buffer, size_t* bufferSize)
 
 void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 {
-	printf("Good, attempting to create a box\n");
+	printf("\tAttempting to create a box\n");
 	
 	//Read length of box name
 	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
@@ -217,7 +218,7 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 		return;
 	}
 	
-	//Mutex Lock before traversing 	
+	//Mutex Lock before traversing 
 	pthread_mutex_lock(&lockList);
 		
 	struct inbox* target = inbox1;
@@ -227,7 +228,9 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 			//ERROR: box name exists already
 			char reply[] = "ER:EXIST";
 			send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
+
 			printf("\tCreate failed: box name is used\n");
+			pthread_mutex_unlock(&lockList);
 			return;
 		}
 	
@@ -238,20 +241,20 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 
 	printf("\tCreating: %s\n", *buffer);
 	createBox(buffer, bufferSize);
-	printf("Created Box\n");
+	printf("\tCreated Box\n");
 	char reply[] = "OK!";
 	send(client_fd, reply, (unsigned)strlen(reply)+1,0);	 
 	return;
 }
 void DELBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
 {
-	printf("Good, attempting to delete a box\n");
+	printf("\tGood, attempting to delete a box\n");
 	return;
 }
 //might need to add in another mutex here
 void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
 {
-	printf("Good, attempting to close a box\n");
+	printf("\tGood, attempting to close a box\n");
 	
 	//No box open
 	if(*currentInbox == NULL){
@@ -274,7 +277,7 @@ void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	//since the user is required to enter the name of the message box to close:
 		//must check if the currently open box is the same one the user is attempting to close
 	if(strcmp((*currentInbox)->name, *buffer)!=0){
-		printf("Attempting to close incorrect inbox\n");
+		printf("\tAttempting to close incorrect inbox\n");
 		char reply [] = "ER:NOOPN";
 		send(client_fd,reply, (unsigned)strlen(reply)+1,0 );
 		return;
@@ -448,8 +451,6 @@ int getCommand(int client_fd, char** buffer, size_t* bufferSize)
 		printf("\tRead %d bytes\n", readBytes);
 	} while (bytes > 0 && readBytes > 0);
 
-	printf("\t%d\t%d\n", bytes, readBytes);
-
 	(*buffer)[6 - bytes - 1] = '\0'; //sets char after command to \0
 	if (bytes > 0) {
 		return 1; //command is too short
@@ -481,7 +482,7 @@ void* handleClient(void* args)
 	while(1) {
 		//Reads message command into buffer
 		int e = getCommand(client_fd, &buffer, &bufferSize);
-		printf("\t%d says %s\n", client_fd, buffer);
+		printf("\t%d says <%s>\n", client_fd, buffer);
 
 		if (e == 1) {
 			printf("\tCommand too small\n");
