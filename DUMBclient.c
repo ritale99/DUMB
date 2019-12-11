@@ -74,7 +74,7 @@ void inputString(size_t* size, char** str)
 	*size = len; //set size to size of space
 }
 
-void handleInput(char** input, size_t* size)
+int handleInput(char** input, size_t* size)
 {
 	printf("Handling input\n");
 	
@@ -87,8 +87,10 @@ void handleInput(char** input, size_t* size)
 		size_t nameSize;
 		printf("Please input the name of the message box to create between 5 and 25 characters:\n");
 		inputString(&nameSize, &boxName);
+
 		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize + 1;
  		*input = realloc(*input, *size);
+
 		sprintf(*input, "%s!%d!%s", "CREAT", nameSize, boxName);
 		free(boxName);	
 	} else if (strcmp(*input, "delete") == 0) { //r
@@ -96,8 +98,10 @@ void handleInput(char** input, size_t* size)
 		size_t nameSize;
 		printf("Please input the name of the message box to delete:\n");
 		inputString(&nameSize, &boxName);
-		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize;
+
+		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize + 1;
  		*input = realloc(*input, *size);
+
 		sprintf(*input, "%s!%d!%s", "DELBX", nameSize, boxName);
 		free(boxName);
 	} else if (strcmp(*input, "open") == 0) { //s
@@ -121,27 +125,34 @@ void handleInput(char** input, size_t* size)
 		size_t nameSize;
 		printf("Please input the name of the message box to delete:\n");
 		inputString(&nameSize, &boxName);
+
 		*size = 5 + 2 + floor(log10((int)nameSize)) + 1 + nameSize;
  		*input = realloc(*input, *size);
+
 		sprintf(*input, "%s!%d!%s", "CLSBX", nameSize, boxName);
 		free(boxName);
 	} else if (strcmp(*input, "next") == 0) { //r
 		*size = 6;
 		*input = realloc(*input, *size);
 		sprintf(*input, "%s", "NXTMG");
-
-
 	} else if (strcmp(*input, "put") == 0) { //s
 		char *boxName;
 		size_t nameSize;
+
 		printf("Please input your message\n");
 		inputString(&nameSize, &boxName);
+
 		*size = 5 + 1 + floor(log10((int)nameSize)) + 1 + nameSize+1;
  		*input = realloc(*input, *size);
+
 		sprintf(*input, "%s!%d!%s", "PUTMG", nameSize, boxName);
 		free(boxName);	
 	} else if (strcmp(*input, "help") == 0){
 		printf("Commands are:\n\tcreate\n\tdelete\n\topen\n\tclose\n\tnext\n\tinput\n");
+	} else {
+		*size = 6;
+		*input = realloc(*input, *size);
+		sprintf(*input, "%s", "QQQQQ");
 	}
 		
 	return;
