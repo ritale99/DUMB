@@ -263,7 +263,7 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 
 	//Check if inbox is inbox1
 	struct inbox* ptr = inbox1;
-	if (strcmp((*ptr).name, buffer) == 0) {
+	if (strcmp((*ptr).name, *buffer) == 0) {
 		inbox1 = (*ptr).next;
 		pthread_mutex_unlock(&lockList);
 
@@ -274,7 +274,7 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 	}
 
 	//Scan all inboxes for inbox to delete or to end
-	while (ptr != NULL && strcmp((*(*ptr).next).name, buffer) != 0) {
+	while (ptr != NULL && strcmp((*(*ptr).next).name, *buffer) != 0) {
 		ptr = (*ptr).next;
 	}
 
