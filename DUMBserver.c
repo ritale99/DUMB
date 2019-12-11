@@ -10,7 +10,7 @@
 
 int server_fd;
 struct sockaddr_in serverAddress;
-
+pthread_mutex_t lockList;
 struct message {
 	char* message; //String
 	struct message* next; //Next message
@@ -134,7 +134,7 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 
 	//Check if target inbox is being used
 	pthread_mutex_lock(&((*targetInbox).lock));
-	if ((*targetInbox).user == 0) {
+	if ((*targetInbox).user != 0) {
 		pthread_mutex_unlock(&((*targetInbox).lock));
 		char reply[] = "ER:OPEND";
 		printf("\tInbox busy\n");
@@ -162,6 +162,7 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 //utility function to create new empty inbox struct
 struct inbox* createBox(char** buffer, size_t* bufferSize)
 {
+	//create the message box: is there any more members of the struct to set?
 	struct inbox* messageBox = (struct inbox*)malloc(sizeof(struct inbox));
 	messageBox->message1 = NULL;
 	messageBox->name = *buffer;
@@ -171,6 +172,9 @@ struct inbox* createBox(char** buffer, size_t* bufferSize)
 	*buffer = NULL;
 	*bufferSize = 0;
 
+	//verify placement of following lock
+	pthread_mutex_lock(&lockList);
+
 	//if there are no Inboxes
 	if (inbox1 == NULL){
 		inbox1 = messageBox;
@@ -178,12 +182,14 @@ struct inbox* createBox(char** buffer, size_t* bufferSize)
 	} 
 	struct inbox* head = inbox1;
 	
-	//append the end of the inbox list
+	//append to the end of the inbox list
 	while(head->next!=NULL){
 		head = head->next;
 	}
 	
 	head->next = messageBox;
+	
+	pthread_mutex_unlock(&lockList);
 
 	return messageBox;
 }
@@ -210,6 +216,9 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 		printf("\tProblem readingNBytes\n");
 		return;
 	}
+	
+	//Mutex Lock before traversing 	
+	pthread_mutex_lock(&lockList);
 		
 	struct inbox* target = inbox1;
 	while (target != NULL){
@@ -224,7 +233,9 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 	
 		target = (*target).next;
 	}
-	
+	//release the lock after traversing
+	pthread_mutex_unlock(&lockList);
+
 	printf("\tCreating: %s\n", *buffer);
 	createBox(buffer, bufferSize);
 	printf("Created Box\n");
@@ -237,9 +248,49 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	printf("Good, attempting to delete a box\n");
 	return;
 }
+//might need to add in another mutex here
 void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
 {
 	printf("Good, attempting to close a box\n");
+	
+	//No box open
+	if(*currentInbox == NULL){
+		printf("No box open\n");
+		char reply[] = "ER:NOOPN";
+		send(client_fd,reply, (unsigned)strlen(reply) + 1, 0);
+		return;
+	}	
+
+	//Read length of box name
+	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
+	printf("\tInbox name size is %d\n", messageSize);
+
+	//Read box name from client message
+	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
+		printf("\tProblem readingNBytes\n");
+		return;
+	}
+	
+	//since the user is required to enter the name of the message box to close:
+		//must check if the currently open box is the same one the user is attempting to close
+	if(strcmp((*currentInbox)->name, *buffer)!=0){
+		printf("Attempting to close incorrect inbox\n");
+		char reply [] = "ER:NOOPN";
+		send(client_fd,reply, (unsigned)strlen(reply)+1,0 );
+		return;
+	}
+	
+	//close the currently open box
+	else{
+		pthread_mutex_lock(&((**currentInbox).lock));
+		(**currentInbox).user =0; 
+		pthread_mutex_unlock(&((**currentInbox).lock)); 
+		*currentInbox = NULL;
+	}
+	
+	char reply []= "OK!";
+	send(client_fd,reply, (unsigned)strlen(reply)+ 1, 0);
+	printf("Closed inbox: %s\n", *buffer);
 	return;
 }
 
@@ -251,7 +302,7 @@ char* dequeue(struct inbox** currentInbox, char** buffer, size_t* bufferSize){
 	
 	(*currentInbox)->message1 = (*currentInbox)->message1->next; 
 	
-	
+	//should be locking any mutex here??	
 	free(temp);
 	
 	return mess;
@@ -296,7 +347,8 @@ void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	printf("Attaining message\n");
 	char* removedMessage = dequeue(currentInbox, buffer, bufferSize);
 	printf("The message: %s, was removed", removedMessage);
-
+	char reply []= "OK!";
+	send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
 	return;
 
 }
