@@ -134,7 +134,7 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 
 	//Check if target inbox is being used
 	pthread_mutex_lock(&((*targetInbox).lock));
-	if ((*targetInbox).user != NULL) {
+	if ((*targetInbox).user == 0) {
 		pthread_mutex_unlock(&((*targetInbox).lock));
 		char reply[] = "ER:OPEND";
 		printf("\tInbox busy\n");
@@ -395,6 +395,8 @@ int getCommand(int client_fd, char** buffer, size_t* bufferSize)
 		bytes -= readBytes;
 		printf("\tRead %d bytes\n", readBytes);
 	} while (bytes > 0 && readBytes > 0);
+
+	printf("\t%d\t%d\n", bytes, readBytes);
 
 	(*buffer)[6 - bytes - 1] = '\0'; //sets char after command to \0
 	if (bytes > 0) {
