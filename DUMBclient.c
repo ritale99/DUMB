@@ -47,6 +47,11 @@ int attemptConnect(char* buffer)
 	return 1;
 }
 
+void readMessage()
+{
+	
+}
+
 void inputString(size_t* size, char** str)
 {
 	char c;
@@ -163,13 +168,11 @@ int handleReply(char* input, char* reply)
 	//get reply
 	memset(reply, '\0', 1024);
 	
-	printf("Handling reply\n");
 	int bytes = 3;
 	int readBytes = 0;
 	do {
 		readBytes = recv(client_fd, reply + (3 - bytes), bytes, 0);
 		bytes -= readBytes;
-		printf("\tRead %d bytes\n", readBytes);
 	} while (bytes > 0 && readBytes > 0);
 
 	//Format input to ignore arguments
@@ -183,10 +186,13 @@ int handleReply(char* input, char* reply)
 
 		if (strcmp(input, "CREAT") == 0) {
 			//On successful CREAT
+			printf("Inbox successfully created\n");
 		} else if (strcmp(input, "OPNBX") == 0) {
 			//ON successful OPNBX
+			printf("Inbox opened\n");
 		} else if (strcmp(input, "NXTMG") == 0) {
-
+			printf("Next Message\n");
+			readMessage();
 		} else if (strcmp(input, "PUTMG") == 0) {
 
 		} else if (strcmp(input, "DELBX") == 0) {
@@ -199,7 +205,6 @@ int handleReply(char* input, char* reply)
 		do {
 			readBytes = recv(client_fd, reply + 3 + (6 - bytes2), bytes2, 0);
 			bytes2 -= readBytes;
-			printf("\tRead %d bytes\n", readBytes);
 		} while (bytes2 > 0 && readBytes > 0);
 
 		printf("\t\t%s\n", reply);
@@ -212,14 +217,19 @@ int handleReply(char* input, char* reply)
 			printf("Malformed Input\n");
 		} else if (strcmp(reply, "ER:NEXST")==0) {
 			//Attempt to open/delete not existing inbox
+			printf("Inbox does not exist\n");
 		} else if (strcmp(reply, "ER:OPEND")==0) {
 			//Attempt to open/delete already opened inbox
+			printf("Inbox is open\n");
 		} else if (strcmp(reply, "ER:EMPTY")==0) {
 			//Attempt to read empty inbox
+			printf("Inbox is empty\n");
 		} else if (strcmp(reply, "ER:NOOPN")==0) {
 			//Attempt to read/write/close with no inbox open
+			printf("No inbox is open\n");
 		} else if (strcmp(reply, "ER:NOTMY")==0) { 
 			//Attempt to delete not empty inbox
+			printf("Inbox is not empty\n");
 		} 
 	} else if (bytes == 3 && readBytes == 0) {
 		//Connection closed
@@ -245,7 +255,6 @@ void setupClient(uint16_t port, in_addr_t address)
 
 	//Buffer of zeros
 	memset(clientAddress.sin_zero, '\0', sizeof(clientAddress.sin_zero));
-	printf("Setup Client\n");
 
 	return;
 }
@@ -270,7 +279,6 @@ int main(int argc, char* argv[])
 		handleInput(&input, &size);
 
 		//send input to server
-		printf("\tSending %s with size %d\n", input, size);
 		send(client_fd, input, size, 0);
 
 		//receives and handles reply from server

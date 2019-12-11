@@ -193,18 +193,10 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 {
 	//Read length of box name
 	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
-	//error for length of name of messagebox
-	//must also start with alphabetic character
-	if (messageSize-1>25 || messageSize-1<5){	
-		char reply [] = "ER:WHAT?";
-		send(client_fd,reply,(unsigned)strlen(reply)+1,0);
-		return;
-	}
-
 	printf("\tInbox name size is %d\n", messageSize);
 	
-	//Read box name from client message
-	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
+	//Read box name from client message, reply what if message is incorrect length
+	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1 || messageSize-1>25 || messageSize-1<5) {
 		char reply[] = "ER:WHAT?";
 		send(client_fd,reply,(unsigned)strlen(reply)+1,0);
 		return;
@@ -270,6 +262,9 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 		//Frees name and inbox
 		free((*ptr).name);
 		free(ptr);
+
+		char reply[] = "OK!";
+		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
 	}
 
@@ -278,8 +273,20 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 		ptr = (*ptr).next;
 	}
 
-	struct inbox* ptr2 = (*ptr).next;
+	if (ptr == NULL) {
+		char reply[] = "ER:NEXST";
+		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
+		return;
+	}
 
+	struct inbox* toDelete = (*ptr).next;
+	(*ptr).next = (*toDelete).next;
+
+	free((*toDelete).name);
+	free(toDelete);
+
+	char reply[] = "OK!";
+	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 
 	return;
 }
@@ -298,7 +305,7 @@ void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	}
 	
 	//since the user is required to enter the name of the message box to close:
-		//must check if the currently open box is the same one the user is attempting to close
+	//must check if the currently open box is the same one the user is attempting to close
 	if(*currentInbox == NULL || strcmp((*currentInbox)->name, *buffer)!=0){
 		char reply [] = "ER:NOOPN";
 		send(client_fd,reply, (unsigned)strlen(reply)+1,0 );
