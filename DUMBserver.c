@@ -564,8 +564,13 @@ int setupServer(uint16_t port, in_addr_t address)
 
 int main(int argc, char * argv[])
 {
+	if (argc != 2) {
+		printf("Please input a port number\n");
+		return 0;
+	}
+
 	//Sets and connects server socket to internet
-	if (setupServer(htons(atoi(argv[2])), inet_addr(argv[1])) < 0) {
+	if (setupServer(htons(atoi(argv[1])), inet_addr("127.0.0.1")) < 0) {
 		printf("Bind failed\n");
 		return 0;
 	}
