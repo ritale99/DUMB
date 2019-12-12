@@ -15,7 +15,6 @@ int attemptConnect(char* buffer)
 	//Attempt connect 3x
 	int i;
 	for (i=0; i<3; ++i) {
-		printf("Connect Attempt %d\n", i);
 		if (connect(client_fd, (struct sockaddr*)&clientAddress, sizeof(clientAddress)) == 0) {
 			//On connect, send HELLO
 			printf("Connected\n");
@@ -27,20 +26,15 @@ int attemptConnect(char* buffer)
 			do {
 				c = recv(client_fd, buffer + (20 - bytes), bytes, 0);
 				bytes -= c;
-				printf("Read %d bytes\n", c);
 			} while (bytes > 0 && c > 0);
 
 			//Check if server reply is correct
 			if (strcmp(buffer, "HELLO DUMBv0 ready!") == 0) {
-				//change this print statement
-				printf("HELLO accepted\n");
+				printf("Session Started\n");
 				return 0;
 			} else {
-				printf("HELLO failed\n");
 				return 1;
 			}
-		} else {
-			printf("\t%d\n", errno);
 		}
 	}
 	printf("Connection failed\n");
@@ -65,7 +59,6 @@ void readMessage()
 		}
 	} while (readBytes > 0 && buffer[len-1] != '!');
 
-	printf("%s\n", buffer);
 	if (readBytes <= 0) {
 		printf("Connection closed.\n");
 		exit(0);
@@ -84,11 +77,10 @@ void readMessage()
 	do {
 		readBytes = recv(client_fd, buffer + len, messageLength - len, 0);
 		len += readBytes;
-		printf("Read Bytes %d\n", readBytes);
 	} while (readBytes > 0 && messageLength - len > 0);
 
 	if (readBytes <= 0) {
-		printf("Connection closed. %d\n", messageLength);
+		printf("Connection closed.\n");
 		exit(0);
 	}
 
@@ -126,7 +118,6 @@ void inputString(size_t* size, char** str)
 
 int handleInput(char** input, size_t* size)
 {
-	printf("Handling input\n");
 	
 	if (strcmp(*input, "quit") == 0) { //s
 		*size = 6;
@@ -227,7 +218,6 @@ int handleReply(char* input, char* reply)
 	input[5] = '\0';
 
 	//On successful command
-	printf("\tServer replied %s\n", reply);
 	if (strcmp(reply, "OK!") == 0) {
 		//read the trailing \0
 
@@ -257,8 +247,6 @@ int handleReply(char* input, char* reply)
 			readBytes = recv(client_fd, reply + 3 + (6 - bytes2), bytes2, 0);
 			bytes2 -= readBytes;
 		} while (bytes2 > 0 && readBytes > 0);
-
-		printf("\t\t%s\n", reply);
 
 		if (strcmp(reply, "ER:EXIST")==0) {
 			//Attempt to create inbox with a used name
