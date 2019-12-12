@@ -91,9 +91,11 @@ void GDBYE(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	free(*buffer);
 
 	//close current inbox
-	pthread_mutex_lock(&((**currentInbox).lock));
-	(**currentInbox).user = 0;
-	pthread_mutex_unlock(&((**currentInbox).lock));
+	if (*currentInbox != NULL) {
+		pthread_mutex_lock(&((**currentInbox).lock));
+		(**currentInbox).user = 0;
+		pthread_mutex_unlock(&((**currentInbox).lock));
+	}
 
 	pthread_exit(0);
 	return;
@@ -269,11 +271,12 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 	}
 
 	//Scan all inboxes for inbox to delete or to end
-	while (ptr != NULL && strcmp((*(*ptr).next).name, *buffer) != 0) {
+	while ((*ptr).next != NULL && strcmp((*((*ptr).next)).name, *buffer) != 0) {
 		ptr = (*ptr).next;
 	}
 
-	if (ptr == NULL) {
+	if ((*ptr).next == NULL) {
+		pthread_mutex_unlock(&lockList);
 		char reply[] = "ER:NEXST";
 		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
@@ -284,6 +287,8 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 
 	free((*toDelete).name);
 	free(toDelete);
+
+	pthread_mutex_unlock(&lockList);
 
 	char reply[] = "OK!";
 	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
@@ -454,7 +459,8 @@ int getCommand(int client_fd, char** buffer, size_t* bufferSize)
 	ssize_t readBytes = 0;
 	ssize_t bytes = 6;
 
-	if (bufferSize > 0) memset(*buffer, '\0', *bufferSize);
+	if (*bufferSize > 0) memset(*buffer, '\0', *bufferSize);
+	*bufferSize = 6;
 	*buffer = realloc(*buffer, bytes);
 
 	printf("Awaiting command of %d\n", client_fd);

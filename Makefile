@@ -1,5 +1,11 @@
 all: DUMBserver.c DUMBclient.c
-	gcc *r.c -lpthread -lm -o server.out; gcc *t.c -lpthread -lm -o client.out;
+	gcc *r.c -lpthread -lm -o DUMBserve; gcc *t.c -lm -o DUMBclient;
+
+client: DUMBclient.c
+	gcc *t.c -lm -o DUMBclient;
+
+serve: DUMBserver.c
+	gcc *r.c -lpthread -lm -o DUMBserve;
 
 clean:
-	rm *.out;
+	rm DUMBserve DUMBclient;
