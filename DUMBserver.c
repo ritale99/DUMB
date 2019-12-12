@@ -536,6 +536,12 @@ void* handleClient(void* args)
 	}
 
 	if (buffer != NULL) free(buffer);
+	close(client_fd);
+	if (*currentInbox != NULL) {
+		pthread_mutex_lock(&((**currentInbox).lock));
+		(**currentInbox).user = 0;
+		pthread_mutex_unlock(&((**currentInbox).lock));
+	}
 	pthread_exit(0);
 }
 
