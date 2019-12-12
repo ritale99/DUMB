@@ -53,7 +53,6 @@ int getLengthFromMessage(int client_fd, char** buffer, size_t* bufferSize)
 
 int readNBytes(int client_fd, char** buffer, size_t* bufferSize, int n)
 {
-	printf("Reading %d bytes\n", n);
 	memset(*buffer, '\0', *bufferSize);
 
 	*bufferSize = n;
@@ -64,10 +63,8 @@ int readNBytes(int client_fd, char** buffer, size_t* bufferSize, int n)
 	do {
 		readBytes = read(client_fd, (*buffer) + (*bufferSize) - n, n);
 		n -= readBytes;
-		printf("\tRead %d bytes\n", readBytes);
 	} while (n > 0 && readBytes > 0);
 
-	printf("\tRead %s\n", *buffer);
 
 	if (readBytes < 0) {
 		return 1; //Error, not sure why
@@ -82,6 +79,7 @@ int readNBytes(int client_fd, char** buffer, size_t* bufferSize, int n)
 void HELLO(int client_fd, char** buffer, size_t* bufferSize)
 {
 	char reply[] = "HELLO DUMBv0 ready!";
+	printf("%d %s\n", client_fd, "connected");
 	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 	return;
 }
@@ -109,6 +107,7 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	//Read box name from client message
 	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
 		char reply[] = "ER:WHAT?";
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd,reply,(unsigned)strlen(reply)+1,0);
 		return;
 	}
@@ -123,6 +122,7 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	//If targetInbox doesn't exist, target inbox doesn't exist
 	if (targetInbox == NULL) {
 		char reply[] = "ER:NEXST";
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
 	}
@@ -132,7 +132,7 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	if ((*targetInbox).user != 0) {
 		pthread_mutex_unlock(&((*targetInbox).lock));
 		char reply[] = "ER:OPEND";
-
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
 	}
@@ -153,6 +153,7 @@ void OPNBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	*currentMsg = NULL;
 
 	char reply[] = "OK!"; //getting deallocated on return before client can read?
+	printf("%d %s\n", client_fd, "OPENBX");
 	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 	return;
 }
@@ -196,12 +197,12 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 {
 	//Read length of box name
 	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
-	printf("\tInbox name size is %d\n", messageSize);
 	
 	//Read box name from client message, reply what if message is incorrect length
 	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1 || messageSize-1>25 || messageSize-1<5) {
 		char reply[] = "ER:WHAT?";
 		send(client_fd,reply,(unsigned)strlen(reply)+1,0);
+		printf("%d %s\n", client_fd, reply);
 		return;
 	}
 	
@@ -210,13 +211,12 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 		
 	struct inbox* target = inbox1;
 	while (target != NULL){
-		printf("Comparing %s with %s\n", (*target).name, *buffer);
 		if (strcmp((*target).name, *buffer) == 0){
 			//ERROR: box name exists already
 			char reply[] = "ER:EXIST";
 			send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
 
-			printf("\tCreate failed: box name is used\n");
+			printf("%d %s\n", client_fd, reply);
 			pthread_mutex_unlock(&lockList);
 			return;
 		}
@@ -226,10 +226,9 @@ void CREAT(int client_fd, char** buffer, size_t* bufferSize)
 	//release the lock after traversing
 	pthread_mutex_unlock(&lockList);
 
-	printf("\tCreating: %s\n", *buffer);
 	createBox(buffer, bufferSize);
-	printf("\tCreated Box\n");
 	char reply[] = "OK!";
+	printf("%d %s\n", client_fd, "CREAT");
 	send(client_fd, reply, (unsigned)strlen(reply)+1,0);	 
 	return;
 }
@@ -237,11 +236,11 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 {
 	//Read length of box name
 	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
-	printf("\tInbox name size is %d\n", messageSize);
 
 	//Get inbox name
 	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
 		char reply[] = "ER:WHAT?";
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
 	}
@@ -252,6 +251,7 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 	if (inbox1 == NULL) {
 		pthread_mutex_unlock(&lockList);
 		char reply[] = "ER:NEXST";
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
 	}
@@ -267,6 +267,7 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 		free(ptr);
 
 		char reply[] = "OK!";
+		printf("%d %s\n", client_fd, "DELBX");
 		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
 	}
@@ -279,6 +280,7 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 	if ((*ptr).next == NULL) {
 		pthread_mutex_unlock(&lockList);
 		char reply[] = "ER:NEXST";
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
 	}
@@ -290,8 +292,9 @@ void DELBX(int client_fd, char** buffer, size_t* bufferSize)
 	free(toDelete);
 
 	pthread_mutex_unlock(&lockList);
-
+	printf("%d %s\n", client_fd, "DELBX");
 	char reply[] = "OK!";
+	
 	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 
 	return;
@@ -301,11 +304,11 @@ void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 {
 	//Read length of box name
 	int messageSize = getLengthFromMessage(client_fd, buffer, bufferSize);
-	printf("\tInbox name size is %d\n", messageSize);
 
 	//Read box name from client message
 	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) {
 		char reply[] = "ER:WHAT?";
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
 	}
@@ -314,6 +317,7 @@ void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	//must check if the currently open box is the same one the user is attempting to close
 	if(*currentInbox == NULL || strcmp((*currentInbox)->name, *buffer)!=0){
 		char reply [] = "ER:NOOPN";
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd,reply, (unsigned)strlen(reply)+1,0 );
 		return;
 	} else { //close the currently open box
@@ -324,8 +328,8 @@ void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	}
 	
 	char reply []= "OK!";
+	printf("%d %s\n", client_fd, "CLSBX");
 	send(client_fd,reply, (unsigned)strlen(reply)+ 1, 0);
-	printf("Closed inbox: %s\n", *buffer);
 	return;
 }
 
@@ -342,7 +346,7 @@ void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	//no box is open
 	if (*currentInbox==NULL){
 		char reply[] = "ER:NOOPN";
-		printf("No message box is open to get the next message from\n");
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd,reply,(unsigned)strlen(reply)+1,0);
 		return;
 	}
@@ -352,7 +356,7 @@ void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	if((*currentInbox)->user == 0){
 		pthread_mutex_unlock(&((*currentInbox)->lock));
 		char reply[] = "ER:NOOPN";
-		printf("No message box is open\n");
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
 		return;
 
@@ -364,17 +368,20 @@ void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	if ((*currentInbox)->message1 == NULL){
 		char reply[] = "ER:EMPTY";
 
-		send(client_fd, reply, (unsigned)strlen(reply)+1,0);	
-		//is this right under this?
+		printf("%d %s\n", client_fd, reply);
+		send(client_fd, reply, (unsigned)strlen(reply)+1,0);
+
 		*buffer = NULL;
 		*bufferSize = 0;
 		return;
 	}
 
-	char* message = (*(*(*currentInbox)).message1).message;
+	char* message = (*((**currentInbox).message1)).message;
 
 	char* reply = (char*)malloc(2 + 1 + floor(log10((int)(strlen(message)+1))) + 1 + strlen(message) + 1);
 	sprintf(reply, "%s!%d!%s", "OK", strlen(message) + 1, message);
+
+	printf("%d %s\n", client_fd, "NXTMG");
 	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 	free(reply);
 
@@ -420,6 +427,7 @@ void PUTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	//Read box name from client message
 	if (readNBytes(client_fd, buffer, bufferSize, messageSize) == 1) { //If client sent wrong message size
 		char reply[] = "ER:WHAT?";
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
 		return;
 	}
@@ -427,7 +435,7 @@ void PUTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	//no box is open
 	if (*currentInbox == NULL){
 		char reply[] = "ER:NOOPN";
-
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
 		return;
 	}
@@ -437,7 +445,7 @@ void PUTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	if((*currentInbox)->user == 0){
 		pthread_mutex_unlock(&((*currentInbox)->lock));
 		char reply[] = "ER:NOOPN";
-
+		printf("%d %s\n", client_fd, reply);
 		send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
 		return;
 
@@ -448,6 +456,7 @@ void PUTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 	enqueue(currentInbox,buffer,bufferSize);
 	
 	char reply[] = "OK!";
+	printf("%d %s\n", client_fd, "PUTMG");
 	send(client_fd, reply, (unsigned)strlen(reply)+1,0);	
 	return;
 }
@@ -461,15 +470,12 @@ int getCommand(int client_fd, char** buffer, size_t* bufferSize)
 	*bufferSize = 6;
 	*buffer = realloc(*buffer, bytes);
 
-	printf("Awaiting command of %d\n", client_fd);
-
 	//Reads message until no more bytes found or 6 bytes read
 	//5 bytes is the command length + 1 \0
 
 	do {
 		readBytes = read(client_fd, (*buffer) + (6 - bytes), bytes);
 		bytes -= readBytes;
-		printf("\tRead %d bytes\n", readBytes);
 	} while (bytes > 0 && readBytes > 0);
 
 	(*buffer)[6 - bytes - 1] = '\0'; //sets char after command to \0
@@ -502,13 +508,13 @@ void* handleClient(void* args)
 	while(1) {
 		//Reads message command into buffer
 		int e = getCommand(client_fd, &buffer, &bufferSize);
-		printf("\t%d says %s\n", client_fd, buffer);
+		printf("%d %s\n", client_fd, buffer);
 
 		if (e == 1) {
 			printf("%d Disconnected\n", client_fd);
 			break;
 		} else if (e == 2) {
-			printf("%Error reading command of %d\n", client_fd); //not sure when this happens
+			printf("%d error reading command\n", client_fd); //not sure when this happens
 			break;
 		} else {
 			//Check what command is inputted
@@ -537,10 +543,10 @@ void* handleClient(void* args)
 
 	if (buffer != NULL) free(buffer);
 	close(client_fd);
-	if (*currentInbox != NULL) {
-		pthread_mutex_lock(&((**currentInbox).lock));
-		(**currentInbox).user = 0;
-		pthread_mutex_unlock(&((**currentInbox).lock));
+	if (currentInbox != NULL) {
+		pthread_mutex_lock(&((*currentInbox).lock));
+		(*currentInbox).user = 0;
+		pthread_mutex_unlock(&((*currentInbox).lock));
 	}
 	pthread_exit(0);
 }
@@ -592,7 +598,6 @@ int main(int argc, char * argv[])
 		//Accept a client's message
 		int* client_fd = (int*)malloc(sizeof(int));
 		*client_fd = accept(server_fd, (struct sockaddr*)&clientAddress, &size);
-		printf("Accepting %d\n", *client_fd);
 
 		//Creates a thread for connection to be handled separately
 		pthread_t thread;
