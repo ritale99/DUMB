@@ -49,7 +49,52 @@ int attemptConnect(char* buffer)
 
 void readMessage()
 {
+	char* buffer = (char*)malloc(4);
+	memset(buffer, '\0', 4);
+
+	size_t len = 0;
+	size_t size = 4;
+	int readBytes = 0;
+
+	//Read until ! to get length of message
+	do {
+		readBytes = recv(client_fd, buffer + (len++), 1, 0);
+		if (len == size) {
+			size += 4;
+			buffer = realloc(buffer, size);
+		}
+	} while (readBytes > 0 && buffer[len-1] != '!');
+
+	printf("%s\n", buffer);
+	if (readBytes <= 0) {
+		printf("Connection closed.\n");
+		exit(0);
+	}
+
+	buffer[len-1] = '\0';
+
+	//Number of bytes for message
+	int messageLength = atoi(buffer);
+	if (messageLength > size) {
+		buffer = realloc(buffer, messageLength);
+	}
 	
+	//Read message using length
+	len = 0;
+	do {
+		readBytes = recv(client_fd, buffer + len, messageLength - len, 0);
+		len += readBytes;
+		printf("Read Bytes %d\n", readBytes);
+	} while (readBytes > 0 && messageLength - len > 0);
+
+	if (readBytes <= 0) {
+		printf("Connection closed. %d\n", messageLength);
+		exit(0);
+	}
+
+	//Output message
+	printf("\t%s\n", buffer);
+	free(buffer);
 }
 
 void inputString(size_t* size, char** str)
@@ -154,6 +199,9 @@ int handleInput(char** input, size_t* size)
 		free(boxName);	
 	} else if (strcmp(*input, "help") == 0){
 		printf("Commands are:\n\tcreate\n\tdelete\n\topen\n\tclose\n\tnext\n\tinput\n");
+		*size = 6;
+		*input = realloc(*input, *size);
+		sprintf(*input, "%s", "QQQQQ");
 	} else {
 		*size = 6;
 		*input = realloc(*input, *size);
@@ -182,21 +230,24 @@ int handleReply(char* input, char* reply)
 	printf("\tServer replied %s\n", reply);
 	if (strcmp(reply, "OK!") == 0) {
 		//read the trailing \0
-		recv(client_fd, reply, 1, 0);
 
 		if (strcmp(input, "CREAT") == 0) {
+			recv(client_fd, reply, 1, 0);
 			//On successful CREAT
 			printf("Inbox successfully created\n");
 		} else if (strcmp(input, "OPNBX") == 0) {
+			recv(client_fd, reply, 1, 0);
 			//ON successful OPNBX
 			printf("Inbox opened\n");
 		} else if (strcmp(input, "NXTMG") == 0) {
 			printf("Next Message\n");
 			readMessage();
 		} else if (strcmp(input, "PUTMG") == 0) {
-
+			recv(client_fd, reply, 1, 0);
+			printf("Message placed\n");
 		} else if (strcmp(input, "DELBX") == 0) {
-			
+			recv(client_fd, reply, 1, 0);
+			printf("Box Deleted\n");
 		}
 	//On Error
 	} else if (strcmp(reply, "ER:") == 0) {
@@ -220,7 +271,7 @@ int handleReply(char* input, char* reply)
 			printf("Inbox does not exist\n");
 		} else if (strcmp(reply, "ER:OPEND")==0) {
 			//Attempt to open/delete already opened inbox
-			printf("Inbox is open\n");
+			printf("Inbox is already in use\n");
 		} else if (strcmp(reply, "ER:EMPTY")==0) {
 			//Attempt to read empty inbox
 			printf("Inbox is empty\n");

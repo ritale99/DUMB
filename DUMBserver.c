@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <string.h> 
 #include <errno.h>
+#include <math.h>
 
 //Server Code
 
@@ -329,17 +330,12 @@ void CLSBX(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 }
 
 //utility function to dequeue message FIFO algorithm
-char* dequeue(struct inbox** currentInbox, char** buffer, size_t* bufferSize){
-	
+void dequeue(struct inbox** currentInbox, char** buffer, size_t* bufferSize){
 	struct message* temp = (*currentInbox)->message1;
-	char* mess = temp->message;
-	
 	(*currentInbox)->message1 = (*currentInbox)->message1->next; 
 	
-	//should be locking any mutex here??	
+	free(temp->message);
 	free(temp);
-	
-	return mess;
 }
 void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** currentInbox, struct message** currentMsg)
 {
@@ -375,13 +371,15 @@ void NXTMG(int client_fd, char** buffer, size_t* bufferSize, struct inbox** curr
 		return;
 	}
 
-	printf("Attaining message\n");
-	char* removedMessage = dequeue(currentInbox, buffer, bufferSize);
-	printf("The message: %s, was removed", removedMessage);
-	char reply []= "OK!";
-	send(client_fd, reply, (unsigned)strlen(reply)+1, 0);
-	return;
+	char* message = (*(*(*currentInbox)).message1).message;
 
+	char* reply = (char*)malloc(2 + 1 + floor(log10((int)(strlen(message)+1))) + 1 + strlen(message) + 1);
+	sprintf(reply, "%s!%d!%s", "OK", strlen(message) + 1, message);
+	send(client_fd, reply, (unsigned)strlen(reply) + 1, 0);
+	free(reply);
+
+	dequeue(currentInbox, buffer, bufferSize);
+	return;
 }
 
 //utility function to enqueue a message
